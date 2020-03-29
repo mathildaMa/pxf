@@ -1,0 +1,13 @@
+<profiles>
+    <profile>
+        <name>foo</name>
+        <protocol>bar</protocol>
+    </profile>
+    <profile>
+        <name>bar</name>
+    </profile>
+    <profile>
+        <name>with-handler</name>
+        <handler>FooProtocolHandler.class</handler>
+    </profile>
+</profiles>

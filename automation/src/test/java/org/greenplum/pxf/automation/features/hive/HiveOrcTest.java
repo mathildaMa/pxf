@@ -80,7 +80,7 @@ public class HiveOrcTest extends HiveBaseTest {
         // Insert into table using dynamic partitioning.
         // Some of the fields are NULL so they will be inserted into the default partition.
         hive.insertDataToPartition(hiveTypesTable, hiveOrcPartitionedTable,
-                new String[] { "fmt" }, new String[] { "s1", "s2", "n1", "s1", "vc1" });
+                new String[] { "fmt" }, new String[] { "t1", "t2", "num1", "t1", "vc1" });
     }
 
     private void preparePxfHiveOrcTypes() throws Exception {

@@ -11,6 +11,7 @@ import org.greenplum.pxf.automation.utils.exception.ExceptionUtils;
 import org.greenplum.pxf.automation.utils.tables.ComparisonUtils;
 import jsystem.utils.FileUtils;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.postgresql.util.PSQLException;
 import org.testng.annotations.Test;
 
@@ -103,7 +104,7 @@ public class HiveTest extends HiveBaseTest {
 
         if (hiveManyPartitionsTable != null)
             return;
-        hiveManyPartitionsTable = new HiveTable(HIVE_MANY_PARTITIONED_TABLE, new String[]{"s1 STRING"});
+        hiveManyPartitionsTable = new HiveTable(HIVE_MANY_PARTITIONED_TABLE, new String[]{"t1 STRING"});
         String[] partitionedColumns = Arrays.copyOfRange(HIVE_TYPES_COLS, 1, HIVE_TYPES_COLS.length);
         hiveManyPartitionsTable.setPartitionedBy(partitionedColumns);
         hive.createTableAndVerify(hiveManyPartitionsTable);
@@ -113,7 +114,7 @@ public class HiveTest extends HiveBaseTest {
         // Insert into table using dynamic partitioning.
         // Some of the fields are NULL so they will be inserted into the default partition.
         hive.insertDataToPartition(hiveTypesTable, hiveManyPartitionsTable,
-                new String[]{"s2", "n1", "d1", "dc1", "tm", "f", "bg", "b", "tn", "sml", "dt", "vc1", "c1", "bin"},
+                new String[]{"t2", "num1", "dub1", "dec1", "tm", "r", "bg", "b", "tn", "sml", "dt", "vc1", "c1", "bin"},
                 new String[]{"*"});
     }
 
@@ -375,7 +376,7 @@ public class HiveTest extends HiveBaseTest {
         hive.runQuery("SET hive.exec.dynamic.partition = true");
         hive.runQuery("SET hive.exec.dynamic.partition.mode = nonstrict");
         hive.insertDataToPartition(hiveSmallDataTable, hivePartitionedPPDTable,
-                new String[]{"s2, n1"}, new String[]{"s1", "d1", "s2", "n1"});
+                new String[]{"t2, num1"}, new String[]{"t1", "dub1", "t2", "num1"});
 
         // Create PXF Table using Hive profile
         createExternalTable(PXF_HIVE_PARTITIONED_PPD_TABLE,
@@ -401,13 +402,13 @@ public class HiveTest extends HiveBaseTest {
         hive.runQuery("SET hive.exec.dynamic.partition = true");
         hive.runQuery("SET hive.exec.dynamic.partition.mode = nonstrict");
         hive.insertDataToPartition(hiveSmallDataTable, hivePartitionedPPDTable,
-                new String[]{"s2, n1"}, new String[]{"s1", "d1", "s2", "n1"});
+                new String[]{"t2, num1"}, new String[]{"t1", "dub1", "t2", "num1"});
 
         String extTableName = PXF_HIVE_PARTITIONED_PPD_TABLE + "_customfilter";
         String filterString;
 
         // Filter with NP1 AND NP2 AND P3 -> P3
-        // Test for (s1 LIKE 'row1') AND (n1 < 999) AND (s2 = 's_14) return one partitions
+        // Test for (t1 LIKE 'row1') AND (num1 < 999) AND (t2 = 's_14) return one partitions
         exTable = TableFactory.getPxfHiveReadableTable(extTableName,
                 PXF_HIVE_SMALLDATA_PPD_COLS, hivePartitionedPPDTable, false);
         filterString = "a0c25s4drow1o7a3c23s3d999o1l0a2c25s4ds_14o5l0";
@@ -417,7 +418,7 @@ public class HiveTest extends HiveBaseTest {
         createTable(exTable);
 
         // Filter with P1 AND (NOT P2 OR NOT P3) -> P1
-        // (s2 = 's_9') AND (NOT(s2 = 's_7') OR NOT(n1 = 4)) should return one partition
+        // (t2 = 's_9') AND (NOT(t2 = 's_7') OR NOT(num1 = 4)) should return one partition
         filterString = "a2c25s3ds_7o5a3c23s1d4o5l2a2c25s3ds_9o5l2l1l0";
         exTable.setName(extTableName + "_2");
         exTable.setUserParameters(hiveTestFilter(filterString));
@@ -425,7 +426,7 @@ public class HiveTest extends HiveBaseTest {
         createTable(exTable);
 
         // Filter with P1 OR (NOT P2 OR NOT P3) -> null
-        // (s2 = 's_9') OR (NOT(s2 = 's_7') OR NOT(n1 = 4)) should return all partitions
+        // (t2 = 's_9') OR (NOT(t2 = 's_7') OR NOT(num1 = 4)) should return all partitions
         filterString = "a2c25s3ds_7o5a3c23s1d4o5l2a2c25s3ds_9o5l2l1l1";
         exTable.setName(extTableName + "_3");
         exTable.setUserParameters(hiveTestFilter(filterString));
@@ -433,7 +434,7 @@ public class HiveTest extends HiveBaseTest {
         createTable(exTable);
 
         // Test for != operators
-        // (s2 != 's_14') should return 9 rows
+        // (t2 != 's_14') should return 9 rows
         filterString = "a2c25s4ds_14o6";
         exTable.setName(extTableName + "_4");
         exTable.setUserParameters(hiveTestFilter(filterString));
@@ -536,7 +537,8 @@ public class HiveTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = {"hive", "features", "gpdb", "security"})
+//    @Test(groups = {"hive", "features", "gpdb", "security"})
+    @Ignore("we now support column count mismatch for Hive")
     public void columnCountMisMatch() throws Exception {
 
         // In pxf table creation a dummy extra column is added so that columns
@@ -701,11 +703,11 @@ public class HiveTest extends HiveBaseTest {
 
         HiveTable hiveTable = new HiveTable(HIVE_COLLECTIONS_TABLE,
                 new String[]{
-                        "s1 STRING",
+                        "t1 STRING",
                         "f1 FLOAT",
-                        "a1 ARRAY<STRING>",
-                        "m1 MAP<STRING, FLOAT>",
-                        "sr1 STRUCT<street:STRING, city:STRING, state:ARRAY<STRING>, zip:INT>"});
+                        "t2 ARRAY<STRING>",
+                        "t3 MAP<STRING, FLOAT>",
+                        "wrong_field_type STRUCT<street:STRING, city:STRING, state:ARRAY<STRING>, zip:INT>"});
 
         hiveTable.setFormat(FORMAT_ROW);
         hiveTable.setDelimiterFieldsBy("\\001");
@@ -973,7 +975,7 @@ public class HiveTest extends HiveBaseTest {
         HiveTable hiveTable = new HiveTable("hive_table_with_nulls", HIVE_RC_COLS);
         hive.createTableAndVerify(hiveTable);
         hive.runQuery("INSERT INTO TABLE " + hiveTable.getName() +
-                " SELECT s1, s2, n1, d1 FROM " + hiveTypesTable.getName());
+                " SELECT t1, t2, num1, dub1 FROM " + hiveTypesTable.getName());
 
         createExternalTable(PXF_HIVE_SMALL_DATA_TABLE, PXF_HIVE_SMALLDATA_COLS, hiveTable);
 

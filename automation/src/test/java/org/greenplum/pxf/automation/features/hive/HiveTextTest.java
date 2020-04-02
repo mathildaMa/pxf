@@ -450,7 +450,7 @@ public class HiveTextTest extends HiveBaseTest {
         HiveTable hiveTable = new HiveTable(HIVE_TEXT_TABLE + "_with_nulls", HIVE_RC_COLS);
         hive.createTableAndVerify(hiveTable);
         hive.runQuery("INSERT INTO TABLE " + hiveTable.getName() +
-                " SELECT s1, s2, n1, d1 FROM " + hiveTypesTable.getName());
+                " SELECT t1, t2, num1, dub1 FROM " + hiveTypesTable.getName());
 
         createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
                 PXF_HIVE_SMALLDATA_COLS, hiveTable);

@@ -21,11 +21,11 @@ public class HiveProxySmokeTest extends BaseSmoke {
             "bool boolean"
     };
     public static final String[] HIVE_FIELDS = {
-            "s1 string",
-            "n1 int",
-            "d1 double",
-            "bg bigint",
-            "b boolean"
+            "name string",
+            "num int",
+            "dub double",
+            "longNum bigint",
+            "bool boolean"
     };
     private static final String TEST_USER = "testuser";
     private Hive hive;

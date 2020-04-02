@@ -32,11 +32,11 @@ public class HiveSmokeTest extends BaseSmoke {
     protected void prepareData() throws Exception {
         // Create Hive table
         hiveTable = TableFactory.getHiveByRowCommaTable("hive_table", new String[] {
-                "s1 string",
-                "n1 int",
-                "d1 double",
-                "bg bigint",
-                "b boolean"
+                "name string",
+                "num int",
+                "dub double",
+                "longNum bigint",
+                "bool boolean"
         });
         // hive.dropTable(hiveTable, false);
         hive.createTableAndVerify(hiveTable);

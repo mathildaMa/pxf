@@ -69,10 +69,15 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 /**
  * Class HiveResolver handles deserialization of records that were serialized
@@ -92,7 +97,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     protected String partitionKeys;
 
     private int numberOfPartitions;
-    private List<OneField> partitionFields;
+    private Map<String, OneField> partitionColumnNames;
     private String hiveDefaultPartName;
 
     /**
@@ -122,14 +127,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         Object tuple = deserializer.deserialize((Writable) onerow.getData());
         // Each Hive record is a Struct
         StructObjectInspector soi = (StructObjectInspector) deserializer.getObjectInspector();
-        List<OneField> record = traverseStruct(tuple, soi, false);
-        /*
-         * We follow Hive convention. Partition fields are always added at the
-         * end of the record
-         */
-        record.addAll(partitionFields);
-
-        return record;
+        return traverseStruct(tuple, soi, false);
     }
 
     /**
@@ -137,15 +135,10 @@ public class HiveResolver extends HivePlugin implements Resolver {
      *
      * @param record list of {@link OneField}
      * @return the constructed {@link OneRow}
-     * @throws Exception if constructing a row from the fields failed
      */
     @Override
-    public OneRow setFields(List<OneField> record) throws Exception {
+    public OneRow setFields(List<OneField> record) {
         throw new UnsupportedOperationException();
-    }
-
-    public List<OneField> getPartitionFields() {
-        return partitionFields;
     }
 
     public int getNumberOfPartitions() {
@@ -190,7 +183,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * by the fragmenter.
      */
     void initPartitionFields() {
-        partitionFields = new LinkedList<>();
+        partitionColumnNames = new HashMap<>();
         if (partitionKeys.equals(HiveDataFragmenter.HIVE_NO_PART_TBL)) {
             return;
         }
@@ -198,11 +191,12 @@ public class HiveResolver extends HivePlugin implements Resolver {
         String[] partitionLevels = partitionKeys.split(HiveDataFragmenter.HIVE_PARTITIONS_DELIM);
         for (String partLevel : partitionLevels) {
             String[] levelKey = partLevel.split(HiveDataFragmenter.HIVE_1_PART_DELIM);
+            String columnName = levelKey[0];
             String type = levelKey[1];
             String val = levelKey[2];
             DataType convertedType;
-            Object convertedValue = null;
-            boolean isDefaultPartition = false;
+            Object convertedValue;
+            boolean isDefaultPartition;
 
             // check if value is default partition
             isDefaultPartition = isDefaultPartition(type, val);
@@ -276,9 +270,9 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     throw new UnsupportedTypeException(
                             "Unsupported partition type: " + type);
             }
-            addOneFieldToRecord(partitionFields, convertedType, convertedValue);
+            partitionColumnNames.put(columnName, new OneField(convertedType.getOID(), convertedValue));
         }
-        numberOfPartitions = partitionFields.size();
+        numberOfPartitions = partitionColumnNames.size();
     }
 
     /*
@@ -463,34 +457,56 @@ public class HiveResolver extends HivePlugin implements Resolver {
         List<? extends StructField> fields = soi.getAllStructFieldRefs();
         List<Object> structFields = soi.getStructFieldsDataAsList(struct);
         if (structFields == null) {
-            throw new BadRecordException(
-                    "Illegal value NULL for Hive data type Struct");
+            throw new BadRecordException("Illegal value NULL for Hive data type Struct");
         }
+
         List<OneField> structRecord = new LinkedList<>();
         List<OneField> complexRecord = new LinkedList<>();
-        List<ColumnDescriptor> colData = context.getTupleDescription();
-        for (int i = 0; i < structFields.size(); i++) {
-            if (toFlatten) {
-                complexRecord.add(new OneField(DataType.TEXT.getOID(), String.format(
-                        "\"%s\"", fields.get(i).getFieldName())));
-            } else if (!colData.get(i).isProjected()) {
-                // Non-projected fields will be sent as null values.
-                // This case is invoked only in the top level of fields and
-                // not when interpreting fields of type struct.
-                traverseTuple(null, fields.get(i).getFieldObjectInspector(),
-                        complexRecord, toFlatten);
-                continue;
-            }
-            traverseTuple(structFields.get(i),
-                    fields.get(i).getFieldObjectInspector(), complexRecord,
-                    toFlatten);
-            if (toFlatten) {
-                addOneFieldToRecord(structRecord, DataType.TEXT,
-                        HdfsUtilities.toString(complexRecord, mapkeyDelim));
+        OneField partitionField;
+
+        if (toFlatten) {
+            for (int i = 0; i < structFields.size(); i++) {
+                complexRecord.add(new OneField(DataType.TEXT.getOID(), String.format("\"%s\"", fields.get(i).getFieldName())));
+                traverseTuple(structFields.get(i), fields.get(i).getFieldObjectInspector(), complexRecord, true);
+                addOneFieldToRecord(structRecord, DataType.TEXT, HdfsUtilities.toString(complexRecord, mapkeyDelim));
                 complexRecord.clear();
             }
+        } else {
+            Map<String, Integer> columnNameToStructIndexMap =
+                    IntStream.range(0, fields.size())
+                            .boxed()
+                            .collect(Collectors.toMap(i -> fields.get(i).getFieldName(), i -> i));
+
+            for (ColumnDescriptor columnDescriptor : context.getTupleDescription()) {
+                Integer i = defaultIfNull(columnNameToStructIndexMap.get(columnDescriptor.columnName()),
+                        columnNameToStructIndexMap.get(columnDescriptor.columnName().toLowerCase()));
+
+                if ((partitionField = getPartitionField(columnDescriptor.columnName())) != null) {
+                    // Skip partitioned columns
+                    complexRecord.add(partitionField);
+                } else if (i == null) {
+                    // This is a column not present in the file, but defined in greenplum.
+                    addOneFieldToRecord(complexRecord, columnDescriptor.getDataType(), null);
+                } else if (!columnDescriptor.isProjected()) {
+                    // Non-projected fields will be sent as null values.
+                    // This case is invoked only in the top level of fields and
+                    // not when interpreting fields of type struct.
+                    traverseTuple(null, fields.get(i).getFieldObjectInspector(), complexRecord, false);
+                } else {
+                    traverseTuple(structFields.get(i), fields.get(i).getFieldObjectInspector(), complexRecord, false);
+                }
+            }
         }
+
         return toFlatten ? structRecord : complexRecord;
+    }
+
+    private OneField getPartitionField(String columnName) {
+        OneField oneField = partitionColumnNames.get(columnName);
+        if (oneField == null) {
+            oneField = partitionColumnNames.get(columnName.toLowerCase());
+        }
+        return oneField;
     }
 
     private List<OneField> traverseMap(Object obj, MapObjectInspector moi)
@@ -521,8 +537,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     }
 
     private void resolvePrimitive(Object o, PrimitiveObjectInspector oi,
-                                  List<OneField> record, boolean toFlatten)
-            throws IOException {
+                                  List<OneField> record, boolean toFlatten) {
         Object val;
         switch (oi.getPrimitiveCategory()) {
             case BOOLEAN: {
@@ -534,7 +549,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if (o == null) {
                     val = null;
                 } else if (o.getClass().getSimpleName().equals("ByteWritable")) {
-                    val = Short.valueOf(((ByteWritable) o).get());
+                    val = (short) ((ByteWritable) o).get();
                 } else {
                     val = ((ShortObjectInspector) oi).get(o);
                 }
@@ -615,7 +630,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 addOneFieldToRecord(record, DataType.DATE, val);
                 break;
             case BYTE: { /* TINYINT */
-                val = (o != null) ? Short.valueOf(((ByteObjectInspector) oi).get(o))
+                val = (o != null) ? (short) ((ByteObjectInspector) oi).get(o)
                         : null;
                 addOneFieldToRecord(record, DataType.SMALLINT, val);
                 break;

@@ -20,8 +20,6 @@ package org.greenplum.pxf.plugins.hive;
  */
 
 import org.apache.commons.lang.CharUtils;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -63,6 +61,8 @@ import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.api.utilities.Utilities;
 import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -84,7 +84,7 @@ import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
  * using Hadoop's Hive serialization framework.
  */
 public class HiveResolver extends HivePlugin implements Resolver {
-    private static final Log LOG = LogFactory.getLog(HiveResolver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(HiveResolver.class);
     protected static final String MAPKEY_DELIM = ":";
     protected static final String COLLECTION_DELIM = ",";
     protected static final String nullChar = "\\N";
@@ -352,9 +352,8 @@ public class HiveResolver extends HivePlugin implements Resolver {
                                        String partitionValue) {
         boolean isDefaultPartition = false;
         if (hiveDefaultPartName.equals(partitionValue)) {
-            LOG.debug("partition " + partitionType
-                    + " is hive default partition (value " + partitionValue
-                    + "), converting field to NULL");
+            LOG.debug("partition {} is hive default partition (value {})," +
+                    "converting field to NULL", partitionType, partitionValue);
             isDefaultPartition = true;
         }
         return isDefaultPartition;
@@ -486,6 +485,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     complexRecord.add(partitionField);
                 } else if (i == null) {
                     // This is a column not present in the file, but defined in greenplum.
+                    LOG.warn("Column {} is not present in the source file, but it is defined in the table", columnDescriptor.columnName());
                     addOneFieldToRecord(complexRecord, columnDescriptor.getDataType(), null);
                 } else if (!columnDescriptor.isProjected()) {
                     // Non-projected fields will be sent as null values.

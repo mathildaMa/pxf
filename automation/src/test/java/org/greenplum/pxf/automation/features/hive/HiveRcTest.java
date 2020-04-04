@@ -20,7 +20,7 @@ public class HiveRcTest extends HiveBaseTest {
 
     @Override
     protected void createExternalTable(String tableName, String[] fields,
-                                     HiveTable hiveTable, boolean useProfile) throws Exception {
+                                       HiveTable hiveTable, boolean useProfile) throws Exception {
 
         exTable = TableFactory.getPxfHiveRcReadableTable(tableName, fields, hiveTable, useProfile);
         createTable(exTable);
@@ -62,9 +62,8 @@ public class HiveRcTest extends HiveBaseTest {
      * Create Hive RC table and load small data to it
      *
      * @param tableName for new Hive RC table
-     * @param setSerde use "ColumnarSerDe" in hive table creation or not.
+     * @param setSerde  use "ColumnarSerDe" in hive table creation or not.
      * @return {@link HiveTable} object
-     *
      * @throws Exception if test fails to run
      */
     private HiveTable createRcTableAndLoadData(String tableName, boolean setSerde)
@@ -105,14 +104,14 @@ public class HiveRcTest extends HiveBaseTest {
         addTableAsPartition(hiveTable, "fmt = 'rc2', prt = 'a'", partitionTable);
         addTableAsPartition(hiveTable, "fmt = 'rc3', prt = 'b'", partitionTable);
         addTableAsPartition(hiveTable, "fmt = 'rc3', prt = 'c'", partitionTable);
-   }
+    }
 
     /**
      * Create Hive table with all supported types:
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void supportedTypesRc() throws Exception {
 
         createExternalTable(GPDB_HIVE_TYPES_TABLE,
@@ -128,12 +127,12 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void binaryData() throws Exception {
 
         // create "hiveBinaryRc" Hive RC table
-        HiveTable hiveTable = new HiveTable(HIVE_BINARY_TABLE + "_rc", new String[] {
-                "s1 STRING", "n1 INT", "data1 BINARY", "data2 BINARY" });
+        HiveTable hiveTable = new HiveTable(HIVE_BINARY_TABLE + "_rc", new String[]{
+                "t1 STRING", "num1 INT", "data1 BINARY", "data2 BINARY"});
         hiveTable.setFormat(FORMAT_ROW);
         hiveTable.setSerde(COLUMNAR_SERDE);
         hiveTable.setStoredAs(RCFILE);
@@ -141,8 +140,8 @@ public class HiveRcTest extends HiveBaseTest {
         loadDataIntoHive("hiveBinaryRcFormatData", hiveTable);
 
         // create external table with BYTEA field
-        createExternalTable("gpdb_hive_binary", new String[] {
-                "t1 TEXT", "num1 INTEGER", "data1 BYTEA", "data2 BYTEA" }, hiveTable, true);
+        createExternalTable("gpdb_hive_binary", new String[]{
+                "t1 TEXT", "num1 INTEGER", "data1 BYTEA", "data2 BYTEA"}, hiveTable, true);
 
         runTincTest("pxf.features.hive.rc_binary_data.runTest");
     }
@@ -152,11 +151,11 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void mismatchedTypes() throws Exception {
 
         String[] mismatchedFields = PXF_HIVE_TYPES_LIMITED_COLS.clone();
-        mismatchedFields[8] = "si INTEGER";
+        mismatchedFields[8] = "sml INTEGER";
         createExternalTable(GPDB_HIVE_TYPES_TABLE,
                 mismatchedFields, hiveRcTypes, false);
 
@@ -168,7 +167,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void hiveRcTable() throws Exception {
 
         createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
@@ -178,11 +177,71 @@ public class HiveRcTest extends HiveBaseTest {
     }
 
     /**
+     * Tests when the column name or partition name doesn't match any of the
+     * column names on the Greenplum definition
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnNameMismatch() throws Exception {
+
+        String[] nonMatchingColumnNames = PXF_HIVE_SMALLDATA_COLS.clone();
+
+        nonMatchingColumnNames[1] = "s2    TEXT";
+
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                nonMatchingColumnNames, hiveRcTable, true);
+
+        runTincTest("pxf.features.hive.errors.partitionNameMismatch.runTest");
+    }
+
+    /**
+     * Create a Greenplum table with a subset of columns from the original
+     * Hive table
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnSubsetOfHiveSchema() throws Exception {
+
+        // Create PXF Table using Hive RC profile
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_COLS, hiveRcTable, true);
+
+        runTincTest("pxf.features.hive.column_subset.runTest");
+    }
+
+    /**
+     * use PXF RC connectors to get data from Hive partitioned table using
+     * specific ColumnarSerDe serde.
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnSubsetOfPartitionedHiveSchema() throws Exception {
+
+        hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
+        hiveTable.setPartitionedBy(HIVE_PARTITION_COLUMN);
+        hiveTable.setFormat(FORMAT_ROW);
+        hiveTable.setSerde(COLUMNAR_SERDE);
+        hiveTable.setStoredAs(RCFILE);
+
+        hive.createTableAndVerify(hiveTable);
+        addPartitionsOne(hiveTable, hiveRcTable);
+
+        // Create PXF Table for Hive partitioned table
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_FMT_COLS, hiveTable, true);
+
+        runTincTest("pxf.features.hive.column_subset_partitioned_table_rc.runTest");
+    }
+
+    /**
      * use PXF RC connectors to get data from Hive RC table without mentioned serde.
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void hiveRcTableDefaultSerde() throws Exception {
 
         createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
@@ -197,7 +256,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void severalRcPartitions() throws Exception {
 
         hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
@@ -221,7 +280,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void severalPartitionsDefaultSerde() throws Exception {
 
         hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
@@ -244,7 +303,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+//    @Test(groups = { "hive", "features", "gpdb", "security" })
     public void severalRcPartitionsNoPartitionColumn() throws Exception {
 
         hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
@@ -269,7 +328,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(enabled = false, groups = { "hive", "features", "gpdb", "security" })
+    @Test(enabled = false, groups = {"hive", "features", "gpdb", "security"})
     public void filterBetweenPartitionsInFragmenter() throws Exception {
 
         gpdb.runQuery("SET optimizer = on");
@@ -283,7 +342,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void filterBetweenPartitionsInAccessor() throws Exception {
 
         gpdb.runQuery("SET optimizer = off");
@@ -323,7 +382,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void filterNoPartitions() throws Exception {
 
         createHiveExternalTable(HIVE_REG_HETEROGEN_TABLE);
@@ -341,7 +400,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void partitionFilterPushDown() throws Exception {
 
         createHiveExternalTable(HIVE_REG_HETEROGEN_TABLE);
@@ -388,14 +447,14 @@ public class HiveRcTest extends HiveBaseTest {
         // Query all data
         gpdb.createTableAndVerify(exTable);
         gpdb.queryResults(exTable, "SELECT * FROM " + exTable.getName()
-                        + " WHERE t1='row6' AND t2='s_11' AND num1='6' AND dub1='11' ORDER BY fmt, t1");
+                + " WHERE t1='row6' AND t2='s_11' AND num1='6' AND dub1='11' ORDER BY fmt, t1");
 
-        Table dataCompareTable = new Table("dataTable",null);
+        Table dataCompareTable = new Table("dataTable", null);
 
         // Prepare expected data
         List<String> expectedData = Arrays.asList("row6", "s_11", "6", "11", "rc3", "c");
         dataCompareTable.addRow(expectedData);
-        ComparisonUtils.compareTables(exTable, dataCompareTable,null);
+        ComparisonUtils.compareTables(exTable, dataCompareTable, null);
 
         // Mixed filter with partition and non partition fields, partition filtering: fmt ='rc3'
         String query = "SELECT * FROM " + exTable.getName()
@@ -408,11 +467,11 @@ public class HiveRcTest extends HiveBaseTest {
         gpdb.queryResults(exTable, query);
 
         // Prepare expected data
-        dataCompareTable = new Table("dataTable",null);
-        dataCompareTable.addRow(new String[] { "row6", "s_11", "6", "11", "rc3", "a" });
+        dataCompareTable = new Table("dataTable", null);
+        dataCompareTable.addRow(new String[]{"row6", "s_11", "6", "11", "rc3", "a"});
         dataCompareTable.addRow(expectedData);
-        dataCompareTable.addRow(new String[] { "row6", "s_11", "6", "11", "rc3", "f" });
-        ComparisonUtils.compareTables(exTable, dataCompareTable,null);
+        dataCompareTable.addRow(new String[]{"row6", "s_11", "6", "11", "rc3", "f"});
+        ComparisonUtils.compareTables(exTable, dataCompareTable, null);
 
         // Mixed filter with partition and non partition fields, partition filtering: prt='a'
         filterString = "a5c25s1dao5";
@@ -420,14 +479,14 @@ public class HiveRcTest extends HiveBaseTest {
 
         // Query all data, non matched filter is done in PXF
         gpdb.createTableAndVerify(exTable);
-        gpdb.queryResults(exTable,"SELECT * FROM " + exTable.getName()
-                        + " WHERE t1='row5' AND t2='s_10' AND num1='5' AND dub1='10' ORDER BY fmt, t1, prt");
+        gpdb.queryResults(exTable, "SELECT * FROM " + exTable.getName()
+                + " WHERE t1='row5' AND t2='s_10' AND num1='5' AND dub1='10' ORDER BY fmt, t1, prt");
 
         // Prepare expected data
-        dataCompareTable = new Table("dataTable",null);
-        dataCompareTable.addRow(new String[] { "row5", "s_10", "5", "10", "rc1", "a" });
-        dataCompareTable.addRow(new String[] { "row5", "s_10", "5", "10", "rc3", "a" });
-        ComparisonUtils.compareTables(exTable, dataCompareTable,null);
+        dataCompareTable = new Table("dataTable", null);
+        dataCompareTable.addRow(new String[]{"row5", "s_10", "5", "10", "rc1", "a"});
+        dataCompareTable.addRow(new String[]{"row5", "s_10", "5", "10", "rc3", "a"});
+        ComparisonUtils.compareTables(exTable, dataCompareTable, null);
     }
 
     private void compareFilteredHiveData(String filterString, List<String> pumpUpColumns)
@@ -450,7 +509,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void partitionFilterPushDownWithDefaultSerde() throws Exception {
 
         hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
@@ -492,7 +551,7 @@ public class HiveRcTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "hcatalog", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "hcatalog", "features", "gpdb", "security"})
     public void aggregateQueries() throws Exception {
 
         prepareTypesData();

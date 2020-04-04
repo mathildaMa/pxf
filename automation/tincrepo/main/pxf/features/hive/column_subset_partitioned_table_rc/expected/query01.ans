@@ -1,0 +1,36 @@
+-- @description query01 for PXF Hive Small Column subset test
+SELECT * from pxf_hive_small_data WHERE num1 <= 10 ORDER BY fmt, num1;
+ fmt | num1 |  t2  
+-----+------+------
+ rc1 |    1 | s_6
+ rc1 |    2 | s_7
+ rc1 |    3 | s_8
+ rc1 |    4 | s_9
+ rc1 |    5 | s_10
+ rc1 |    6 | s_11
+ rc1 |    7 | s_12
+ rc1 |    8 | s_13
+ rc1 |    9 | s_14
+ rc1 |   10 | s_15
+ rc2 |    1 | s_6
+ rc2 |    2 | s_7
+ rc2 |    3 | s_8
+ rc2 |    4 | s_9
+ rc2 |    5 | s_10
+ rc2 |    6 | s_11
+ rc2 |    7 | s_12
+ rc2 |    8 | s_13
+ rc2 |    9 | s_14
+ rc2 |   10 | s_15
+ rc3 |    1 | s_6
+ rc3 |    2 | s_7
+ rc3 |    3 | s_8
+ rc3 |    4 | s_9
+ rc3 |    5 | s_10
+ rc3 |    6 | s_11
+ rc3 |    7 | s_12
+ rc3 |    8 | s_13
+ rc3 |    9 | s_14
+ rc3 |   10 | s_15
+(30 rows)
+

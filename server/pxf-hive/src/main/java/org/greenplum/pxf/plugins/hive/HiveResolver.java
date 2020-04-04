@@ -95,6 +95,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     protected String serdeClassName;
     protected String propsString;
     protected String partitionKeys;
+    protected List<Integer> hiveIndexes;
 
     private int numberOfPartitions;
     private Map<String, OneField> partitionColumnNames;
@@ -157,6 +158,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 : input.getOption("COLLECTION_DELIM");
         mapkeyDelim = input.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
                 : input.getOption("MAPKEY_DELIM");
+        hiveIndexes = hiveUserData.getHiveIndexes();
     }
 
     /*
@@ -270,9 +272,18 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     throw new UnsupportedTypeException(
                             "Unsupported partition type: " + type);
             }
-            partitionColumnNames.put(columnName, new OneField(convertedType.getOID(), convertedValue));
+
+            if (columnDescriptorContainsColumn(columnName)) {
+                partitionColumnNames.put(columnName, new OneField(convertedType.getOID(), convertedValue));
+            }
         }
         numberOfPartitions = partitionColumnNames.size();
+    }
+
+    private boolean columnDescriptorContainsColumn(String columnName) {
+        return context.getTupleDescription()
+                .stream()
+                .anyMatch(cd -> columnName.equals(cd.columnName()) || columnName.toLowerCase().equals(cd.columnName()));
     }
 
     /*
@@ -348,7 +359,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * @param partitionValue partition value
      * @return true if the partition value is Hive's default partition
      */
-    private boolean isDefaultPartition(String partitionType,
+    protected boolean isDefaultPartition(String partitionType,
                                        String partitionValue) {
         boolean isDefaultPartition = false;
         if (hiveDefaultPartName.equals(partitionValue)) {
@@ -476,9 +487,12 @@ public class HiveResolver extends HivePlugin implements Resolver {
                             .boxed()
                             .collect(Collectors.toMap(i -> fields.get(i).getFieldName(), i -> i));
 
-            for (ColumnDescriptor columnDescriptor : context.getTupleDescription()) {
+            List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
+            for (int j = 0; j < tupleDescription.size(); j++) {
+                ColumnDescriptor columnDescriptor = tupleDescription.get(j);
                 Integer i = defaultIfNull(columnNameToStructIndexMap.get(columnDescriptor.columnName()),
                         columnNameToStructIndexMap.get(columnDescriptor.columnName().toLowerCase()));
+                Integer structIndex = hiveIndexes.get(j);
 
                 if ((partitionField = getPartitionField(columnDescriptor.columnName())) != null) {
                     // Skip partitioned columns
@@ -493,7 +507,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                     // not when interpreting fields of type struct.
                     traverseTuple(null, fields.get(i).getFieldObjectInspector(), complexRecord, false);
                 } else {
-                    traverseTuple(structFields.get(i), fields.get(i).getFieldObjectInspector(), complexRecord, false);
+                    traverseTuple(structFields.get(structIndex), fields.get(i).getFieldObjectInspector(), complexRecord, false);
                 }
             }
         }

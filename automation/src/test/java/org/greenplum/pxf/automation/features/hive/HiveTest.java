@@ -196,6 +196,38 @@ public class HiveTest extends HiveBaseTest {
     }
 
     /**
+     * Create a Greenplum table with a subset of columns from the original
+     * Hive table
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnSubsetOfHiveSchema() throws Exception {
+
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_COLS, hiveSmallDataTable);
+
+        runTincTest("pxf.features.hive.column_subset.runTest");
+    }
+
+    /**
+     * Create a Greenplum table with a subset of columns from the original
+     * partitioned Hive table
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = { "hive", "features", "gpdb", "security" })
+    public void columnSubsetOfPartitionedHiveSchema() throws Exception {
+
+        preparePartitionedData();
+        // Create PXF Table using HiveOrc profile
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_FMT_COLS, hivePartitionedTable);
+
+        runTincTest("pxf.features.hive.column_subset_partitioned_table.runTest");
+    }
+
+    /**
      * PXF on Hive binary data table
      *
      * @throws Exception if test fails to run
@@ -537,7 +569,7 @@ public class HiveTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-//    @Test(groups = {"hive", "features", "gpdb", "security"})
+    //@Test(groups = {"hive", "features", "gpdb", "security"})
     @Ignore("we now support column count mismatch for Hive")
     public void columnCountMisMatch() throws Exception {
 
@@ -547,6 +579,27 @@ public class HiveTest extends HiveBaseTest {
                 PXF_HIVE_SMALLDATA_FMT_COLS, hiveSmallDataTable);
 
         runTincTest("pxf.features.hive.errors.columnCountMisMatch.runTest");
+    }
+
+    /**
+     * Tests when the column name doesn't match any of the columns defined at
+     * the Greenplum table definition
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnNameMismatch() throws Exception {
+
+        String[] nonMatchingColumnNames = PXF_HIVE_SMALLDATA_FMT_COLS.clone();
+
+        nonMatchingColumnNames[1] = "s2    TEXT";
+
+        // In pxf table creation a dummy extra column is added so that columns
+        // count from pxf will not match with hive table
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                nonMatchingColumnNames, hiveSmallDataTable);
+
+        runTincTest("pxf.features.hive.errors.columnNameMismatch.runTest");
     }
 
     /**

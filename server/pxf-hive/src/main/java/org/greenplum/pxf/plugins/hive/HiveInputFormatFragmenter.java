@@ -22,13 +22,19 @@ package org.greenplum.pxf.plugins.hive;
 
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.hive.metastore.api.Table;
-import org.greenplum.pxf.api.io.DataType;
 import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
+
+import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 /**
  * Specialized Hive fragmenter for RC and Text files tables. Unlike the
@@ -59,43 +65,57 @@ public class HiveInputFormatFragmenter extends HiveDataFragmenter {
         ORC_FILE_INPUT_FORMAT
     }
 
-    /*
-     * Checks that hive fields and partitions match the GPDB schema. Throws an
-     * exception if: - the number of fields (+ partitions) do not match the GPDB
-     * table definition. - the hive fields types do not match the GPDB fields.
+    /**
+     * Checks that hive fields and partitions match the Greenplum schema.
+     * Throws an exception if:
+     * - A Greenplum column does not match any columns or partitions on the
+     * Hive table definition
+     * - The hive fields types do not match the Greenplum fields.
+     * Then return a list of indexes corresponding to the matching columns in
+     * Greenplum, ordered by the Greenplum schema order. It excludes any
+     * partition column
+     *
+     * @param tbl the hive table
+     * @return a list of indexes
      */
     @Override
-    void verifySchema(Table tbl) throws Exception {
+    List<Integer> verifySchema(Table tbl) {
 
-        int columnsSize = context.getColumns();
-        int hiveColumnsSize = tbl.getSd().getColsSize();
-        int hivePartitionsSize = tbl.getPartitionKeysSize();
-
-        LOG.debug("Hive table: {} fields, {} partitions. GPDB table: {} fields.",
-                hiveColumnsSize, hivePartitionsSize, columnsSize);
-
-        // check schema size
-        if (columnsSize != (hiveColumnsSize + hivePartitionsSize)) {
-            throw new IllegalArgumentException(
-                    String.format("Hive table schema (%d fields, %d partitions) doesn't match PXF table (%d fields)",
-                            hiveColumnsSize, hivePartitionsSize, columnsSize));
-        }
-
-        int index = 0;
-        // check hive fields
+        List<Integer> indexes = new ArrayList<>();
         List<FieldSchema> hiveColumns = tbl.getSd().getCols();
-        for (FieldSchema hiveCol : hiveColumns) {
-            ColumnDescriptor colDesc = context.getColumn(index++);
-            DataType colType = colDesc.getDataType();
-            HiveUtilities.validateTypeCompatible(colType, colDesc.columnTypeModifiers(), hiveCol.getType(), colDesc.columnName());
-        }
-        // check partition fields
         List<FieldSchema> hivePartitions = tbl.getPartitionKeys();
-        for (FieldSchema hivePart : hivePartitions) {
-            ColumnDescriptor colDesc = context.getColumn(index++);
-            DataType colType = colDesc.getDataType();
-            HiveUtilities.validateTypeCompatible(colType, colDesc.columnTypeModifiers(), hivePart.getType(), colDesc.columnName());
-        }
 
+        Map<String, FieldSchema> columnNameToFieldSchema =
+                Stream.concat(hiveColumns.stream(), hivePartitions.stream())
+                        .collect(Collectors.toMap(FieldSchema::getName, fieldSchema -> fieldSchema));
+
+        Map<String, Integer> columnNameToColsIndexMap =
+                IntStream.range(0, hiveColumns.size())
+                        .boxed()
+                        .collect(Collectors.toMap(i -> hiveColumns.get(i).getName(), i -> i));
+
+        FieldSchema fieldSchema;
+        for (ColumnDescriptor cd : context.getTupleDescription()) {
+            if ((fieldSchema = columnNameToFieldSchema.get(cd.columnName())) == null &&
+                    (fieldSchema = columnNameToFieldSchema.get(cd.columnName().toLowerCase())) == null) {
+                throw new IllegalArgumentException(
+                        String.format("Column '%s' does not exist in the Hive schema or Hive Partition. " +
+                                        "Ensure the column or partition exists and check the name spelling and case",
+                                cd.columnName()));
+            }
+
+            HiveUtilities.validateTypeCompatible(
+                    cd.getDataType(),
+                    cd.columnTypeModifiers(),
+                    fieldSchema.getType(),
+                    cd.columnName());
+
+            // The index of the column on the Hive schema
+            Integer index =
+                    defaultIfNull(columnNameToColsIndexMap.get(cd.columnName()),
+                            columnNameToColsIndexMap.get(cd.columnName().toLowerCase()));
+            indexes.add(index);
+        }
+        return indexes;
     }
 }

@@ -29,6 +29,7 @@ import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 import org.greenplum.pxf.plugins.hive.utilities.HiveUtilities;
 
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 /**
  * Specialized HiveResolver for a Hive table stored as RC file.
@@ -41,7 +42,7 @@ public class HiveORCSerdeResolver extends HiveResolver {
 
     /* read the data supplied by the fragmenter: inputformat name, serde name, partition keys */
     @Override
-    void parseUserData(RequestContext input) throws Exception {
+    void parseUserData(RequestContext input) {
         HiveUserData hiveUserData = HiveUtilities.parseHiveUserData(input);
         serdeType = hiveUserData.getSerdeClassName();
         partitionKeys = hiveUserData.getPartitionKeys();
@@ -50,6 +51,7 @@ public class HiveORCSerdeResolver extends HiveResolver {
                 : input.getOption("COLLECTION_DELIM");
         mapkeyDelim = input.getOption("MAPKEY_DELIM") == null ? MAPKEY_DELIM
                 : input.getOption("MAPKEY_DELIM");
+        hiveIndexes = hiveUserData.getHiveIndexes();
     }
 
     /*
@@ -68,19 +70,22 @@ public class HiveORCSerdeResolver extends HiveResolver {
         StringBuilder columnNames = new StringBuilder(numberOfDataColumns * 2); // column + delimiter
         StringBuilder columnTypes = new StringBuilder(numberOfDataColumns * 2); // column + delimiter
         String[] cols = typesString.split(":");
-        String[] hiveColTypes = new String[numberOfDataColumns];
+        String[] hiveColTypes = new String[cols.length];
         parseColTypes(cols, hiveColTypes);
 
         String delim = ",";
-        for (int i = 0; i < numberOfDataColumns; i++) {
-            ColumnDescriptor column = input.getColumn(i);
+        for (int j = 0; j < input.getTupleDescription().size(); j++) {
+            ColumnDescriptor column = input.getColumn(j);
+            Integer i = hiveIndexes.get(j);
+            if (i == null) continue;
+
             String columnName = column.columnName();
             String columnType = HiveUtilities.toCompatibleHiveType(column.getDataType(), column.columnTypeModifiers());
             //Complex Types will have a mismatch between Hive and Gpdb type
             if (!columnType.equals(hiveColTypes[i])) {
                 columnType = hiveColTypes[i];
             }
-            if (i > 0) {
+            if (columnNames.length() > 0) {
                 columnNames.append(delim);
                 columnTypes.append(delim);
             }

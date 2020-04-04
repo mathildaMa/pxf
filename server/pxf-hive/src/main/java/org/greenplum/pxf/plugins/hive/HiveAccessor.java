@@ -64,6 +64,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
     private List<HivePartition> partitions;
     private static final String HIVE_DEFAULT_PARTITION = "__HIVE_DEFAULT_PARTITION__";
     private int skipHeaderCount;
+    protected List<Integer> hiveIndexes;
 
     static class HivePartition {
         public String name;
@@ -125,6 +126,7 @@ public class HiveAccessor extends HdfsSplittableDataAccessor {
         initPartitionFields(hiveUserData.getPartitionKeys());
         filterInFragmenter = hiveUserData.isFilterInFragmenter();
         skipHeaderCount = hiveUserData.getSkipHeader();
+        hiveIndexes = hiveUserData.getHiveIndexes();
     }
 
     /**

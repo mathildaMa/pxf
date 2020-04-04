@@ -116,6 +116,38 @@ public class HiveOrcTest extends HiveBaseTest {
     }
 
     /**
+     * Create a Greenplum table with a subset of columns from the original
+     * Hive table
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void columnSubsetOfHiveSchema() throws Exception {
+
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_COLS, hiveOrcSmallDataTable);
+
+        runTincTest("pxf.features.hive.column_subset.runTest");
+    }
+
+    /**
+     * Create a Greenplum table with a subset of columns from the original
+     * partitioned Hive table
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = { "hive", "features", "gpdb", "security" })
+    public void columnSubsetOfPartitionedHiveSchema() throws Exception {
+
+        preparePartitionedData();
+        // Create PXF Table using HiveOrc profile
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SUBSET_FMT_COLS, hiveOrcPartitionedTable);
+
+        runTincTest("pxf.features.hive.column_subset_partitioned_table_orc.runTest");
+    }
+
+    /**
      * Query for binary hive table
      *
      * @throws Exception if test fails to run

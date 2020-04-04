@@ -19,6 +19,9 @@
 
 package org.greenplum.pxf.plugins.hive;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 /**
  * Class which is a carrier for user data in Hive fragment.
  *
@@ -26,23 +29,29 @@ package org.greenplum.pxf.plugins.hive;
 public class HiveUserData {
 
     public static final String HIVE_UD_DELIM = "!HUDD!";
-    private static final int EXPECTED_NUM_OF_TOKS = 8;
+    private static final int EXPECTED_NUM_OF_TOKS = 11;
 
-    private String inputFormatName;
-    private String serdeClassName;
-    private String propertiesString;
-    private String partitionKeys;
-    private boolean filterInFragmenter;
-    private String delimiter;
-    private String colTypes;
-    private int skipHeader;
+    private final String inputFormatName;
+    private final String serdeClassName;
+    private final String propertiesString;
+    private final String partitionKeys;
+    private final boolean filterInFragmenter;
+    private final String delimiter;
+    private final String colTypes;
+    private final int skipHeader;
+    private final List<Integer> hiveIndexes;
+    private final String allColumnNames;
+    private final String allColumnTypes;
 
     public HiveUserData(String inputFormatName, String serdeClassName,
             String propertiesString, String partitionKeys,
             boolean filterInFragmenter,
             String delimiter,
             String colTypes,
-            int skipHeader) {
+            int skipHeader,
+            List<Integer> hiveIndexes,
+            String allColumnNames,
+            String allColumnTypes) {
 
         this.inputFormatName = inputFormatName;
         this.serdeClassName = serdeClassName;
@@ -52,6 +61,9 @@ public class HiveUserData {
         this.delimiter = (delimiter == null ? "0" : delimiter);
         this.colTypes = colTypes;
         this.skipHeader = skipHeader;
+        this.hiveIndexes = hiveIndexes;
+        this.allColumnNames = allColumnNames;
+        this.allColumnTypes = allColumnTypes;
     }
 
     /**
@@ -135,6 +147,36 @@ public class HiveUserData {
         return skipHeader;
     }
 
+    /**
+     * Returns a list of indexes corresponding to columns on the Hive table
+     * that will be retrieved during the query
+     * 
+     * @return the list of indexes
+     */
+    public List<Integer> getHiveIndexes() {
+        return hiveIndexes;
+    }
+
+    /**
+     * Returns a comma-separated list of column names defined in the Hive
+     * table definition
+     * 
+     * @return the comma-separated list of column names
+     */
+    public String getAllColumnNames() {
+        return allColumnNames;
+    }
+
+    /**
+     * Returnts a comma-separated list of column types defined in the Hive
+     * table definition
+     * 
+     * @return the comma-separated list of column types
+     */
+    public String getAllColumnTypes() {
+        return allColumnTypes;
+    }
+
     @Override
     public String toString() {
         return inputFormatName + HiveUserData.HIVE_UD_DELIM
@@ -143,8 +185,11 @@ public class HiveUserData {
                 + partitionKeys + HiveUserData.HIVE_UD_DELIM
                 + filterInFragmenter + HiveUserData.HIVE_UD_DELIM
                 + delimiter + HiveUserData.HIVE_UD_DELIM
-                + colTypes +  HiveUserData.HIVE_UD_DELIM
-                + skipHeader;
+                + colTypes + HiveUserData.HIVE_UD_DELIM
+                + skipHeader + HiveUserData.HIVE_UD_DELIM
+                + (hiveIndexes != null ? hiveIndexes.stream().map(String::valueOf).collect(Collectors.joining(",")) : "null") + HiveUserData.HIVE_UD_DELIM
+                + allColumnNames + HiveUserData.HIVE_UD_DELIM
+                + allColumnTypes;
     }
 
 }

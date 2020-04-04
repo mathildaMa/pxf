@@ -20,13 +20,19 @@ package org.greenplum.pxf.plugins.hive;
  */
 
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.ql.io.RCFileInputFormat;
 import org.apache.hadoop.hive.ql.io.RCFileRecordReader;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
+import org.greenplum.pxf.api.utilities.ColumnDescriptor;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.*;
 
 /**
  * Specialization of HiveAccessor for a Hive table that stores only RC files.
@@ -40,6 +46,33 @@ public class HiveRCFileAccessor extends HiveAccessor {
      */
     public HiveRCFileAccessor() {
         super(new RCFileInputFormat());
+    }
+
+    @Override
+    public boolean openForRead() throws Exception {
+        addColumns();
+        return super.openForRead();
+    }
+
+    /**
+     * Adds the table tuple description to JobConf object
+     * so only these columns will be returned.
+     */
+    private void addColumns() {
+
+        List<Integer> colIds = new ArrayList<>();
+        List<String> colNames = new ArrayList<>();
+        List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
+        for (int i = 0; i < tupleDescription.size(); i++) {
+            ColumnDescriptor col = tupleDescription.get(i);
+            if (col.isProjected() && hiveIndexes.get(i) != null) {
+                colIds.add(hiveIndexes.get(i));
+                colNames.add(col.columnName());
+            }
+        }
+        jobConf.set(READ_ALL_COLUMNS, "false");
+        jobConf.set(READ_COLUMN_IDS_CONF_STR, StringUtils.join(colIds, ","));
+        jobConf.set(READ_COLUMN_NAMES_CONF_STR, StringUtils.join(colNames, ","));
     }
 
     @Override

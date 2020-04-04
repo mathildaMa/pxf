@@ -136,7 +136,7 @@ public class HiveTextTest extends HiveBaseTest {
 
         // Hive column is DECIMAL(38,18), expected GPDB type is NUMERIC(38,18) or NUMERIC, but actual is NUMERIC(30,18)
         tableFieldTypes = PXF_HIVE_TYPES_COLS.clone();
-        tableFieldTypes[4] = "dc1 NUMERIC(30,18)";
+        tableFieldTypes[4] = "dec1 NUMERIC(30,18)";
         createExternalTable(GPDB_HIVE_TYPES_TABLE,
                 tableFieldTypes, hiveTypesTable, false, ",");
 
@@ -145,13 +145,13 @@ public class HiveTextTest extends HiveBaseTest {
             Assert.fail("Query should fail with schema mismatch error");
         } catch (Exception e) {
             ExceptionUtils.validate(null, e,
-                    new Exception(unsupported + "dc1: modifiers are not compatible, \\[38, 18\\], \\[30, 18\\]"),
+                    new Exception(unsupported + "dec1: modifiers are not compatible, \\[38, 18\\], \\[30, 18\\]"),
                     true, true);
         }
 
         // Hive column is DECIMAL(38,18), expected GPDB type is NUMERIC(38,18) or NUMERIC, but actual is NUMERIC(38)
         tableFieldTypes = PXF_HIVE_TYPES_COLS.clone();
-        tableFieldTypes[4] = "dc1 NUMERIC(38)";
+        tableFieldTypes[4] = "dec1 NUMERIC(38)";
         createExternalTable(GPDB_HIVE_TYPES_TABLE,
                 tableFieldTypes, hiveTypesTable, false, ",");
 
@@ -160,7 +160,7 @@ public class HiveTextTest extends HiveBaseTest {
             Assert.fail("Query should fail with schema mismatch error");
         } catch (Exception e) {
             ExceptionUtils.validate(null, e,
-                    new Exception(unsupported + "dc1: modifiers are not compatible, \\[38, 18\\], \\[38, 0\\]"),
+                    new Exception(unsupported + "dec1: modifiers are not compatible, \\[38, 18\\], \\[38, 0\\]"),
                     true, true);
         }
     }

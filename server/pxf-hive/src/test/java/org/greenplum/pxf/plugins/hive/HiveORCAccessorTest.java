@@ -31,6 +31,8 @@ import org.greenplum.pxf.plugins.hdfs.utilities.HdfsUtilities;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+
 import static org.apache.hadoop.hive.ql.io.sarg.ConvertAstToSearchArg.SARG_PUSHDOWN;
 import static org.junit.Assert.assertEquals;
 
@@ -41,7 +43,7 @@ public class HiveORCAccessorTest {
 
     @Before
     public void setup() throws Exception {
-        HiveUserData userData = new HiveUserData("", "", null, HiveDataFragmenter.HIVE_NO_PART_TBL, true, "1", "", 0);
+        HiveUserData userData = new HiveUserData("", "", null, HiveDataFragmenter.HIVE_NO_PART_TBL, true, "1", "", 0, Arrays.asList(new Integer[]{0, 1}), "col1,FOO", "string, string");
         context = new RequestContext();
         context.setConfig("default");
         context.setUser("test-user");

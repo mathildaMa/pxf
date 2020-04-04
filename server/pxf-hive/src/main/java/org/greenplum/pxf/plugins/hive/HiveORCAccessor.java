@@ -116,16 +116,18 @@ public class HiveORCAccessor extends HiveAccessor implements StatsAccessor {
     }
 
     /**
-     * Adds the table tuple description to JobConf ojbect
+     * Adds the table tuple description to JobConf object
      * so only these columns will be returned.
      */
     private void addColumns() {
 
         List<Integer> colIds = new ArrayList<>();
         List<String> colNames = new ArrayList<>();
-        for (ColumnDescriptor col : context.getTupleDescription()) {
-            if (col.isProjected()) {
-                colIds.add(col.columnIndex());
+        List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
+        for (int i = 0; i < tupleDescription.size(); i++) {
+            ColumnDescriptor col = tupleDescription.get(i);
+            if (col.isProjected() && hiveIndexes.get(i) != null) {
+                colIds.add(hiveIndexes.get(i));
                 colNames.add(col.columnName());
             }
         }

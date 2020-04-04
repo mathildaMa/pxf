@@ -37,7 +37,11 @@ import org.greenplum.pxf.plugins.hive.HiveUserData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -215,9 +219,27 @@ public class HiveUtilities {
                     + HiveUserData.getNumOfTokens() + " tokens, but got " + toks.length);
         }
 
-        HiveUserData hiveUserData = new HiveUserData(toks[0], toks[1], toks[2], toks[3], Boolean.valueOf(toks[4]), toks[5], toks[6], Integer.parseInt(toks[7]));
+        String indexesStr = toks[8];
+        List<Integer> indexes = null;
 
-        return hiveUserData;
+        if (indexesStr != null && !"null".equals(indexesStr)) {
+            indexes = Stream.of(indexesStr.split(","))
+                    .map(s -> "null".equals(s) ? null : Integer.parseInt(s))
+                    .collect(Collectors.toList());
+        }
+
+        return new HiveUserData(
+                toks[0],
+                toks[1],
+                toks[2],
+                toks[3],
+                Boolean.parseBoolean(toks[4]),
+                toks[5],
+                toks[6],
+                Integer.parseInt(toks[7]),
+                indexes,
+                toks[9],
+                toks[10]);
     }
 
     /**

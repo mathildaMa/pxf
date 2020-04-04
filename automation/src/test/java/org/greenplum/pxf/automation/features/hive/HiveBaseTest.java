@@ -44,8 +44,8 @@ public class HiveBaseTest extends BaseFeature {
             "r     REAL",
             "bg    BIGINT",
             "b     BOOLEAN",
-            "si    SMALLINT",
-            "ba    BYTEA"
+            "sml   SMALLINT",
+            "bin   BYTEA"
     };
     static final String[] HIVE_TYPES_COLS = {
             "t1    STRING",
@@ -66,14 +66,14 @@ public class HiveBaseTest extends BaseFeature {
     };
     static final String[] HIVE_TYPES_LIMITED_COLS = {
             "key   STRING",
-            "s1    STRING",
-            "n1    INT",
+            "t1    STRING",
+            "num1  INT",
             "dub1  DOUBLE",
             "tm    TIMESTAMP",
-            "f     FLOAT",
+            "r     FLOAT",
             "bg    BIGINT",
             "b     BOOLEAN",
-            "si    SMALLINT",
+            "sml   SMALLINT",
             "bin   BINARY"
     };
     static final String[] HIVE_SMALLDATA_COLS = {
@@ -99,12 +99,21 @@ public class HiveBaseTest extends BaseFeature {
             "num1  INTEGER",
             "dub1  DOUBLE PRECISION"
     };
+    static final String[] PXF_HIVE_SUBSET_COLS = {
+            "dub1  DOUBLE PRECISION",
+            "t2    TEXT"
+    };
     static final String[] PXF_HIVE_SMALLDATA_FMT_COLS = {
             "t1    TEXT",
             "t2    TEXT",
             "num1  INTEGER",
             "dub1  DOUBLE PRECISION",
             "fmt   TEXT"
+    };
+    static final String[] PXF_HIVE_SUBSET_FMT_COLS = {
+            "fmt   TEXT",
+            "num1  INTEGER",
+            "t2    TEXT"
     };
     static final String[] PXF_HIVE_SMALLDATA_PRT_COLS = {
             "t1    TEXT",

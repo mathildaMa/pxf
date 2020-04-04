@@ -145,7 +145,10 @@ class HiveUserDataBuilder {
                 false,
                 null,
                 null,
-                skipHeader);
+                skipHeader,
+                null,
+                null,
+                null);
     }
 
     public HiveUserDataBuilder withSerdeClassName(String s) {

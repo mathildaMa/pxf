@@ -106,7 +106,6 @@ public class HiveORCVectorizedResolver extends HiveResolver implements ReadVecto
         for (int columnIndex = 0; columnIndex < vectorizedBatch.numCols; columnIndex++) {
             ObjectInspector oi = allStructFieldRefs.get(columnIndex).getFieldObjectInspector();
             if (oi.getCategory() == Category.PRIMITIVE) {
-                PrimitiveObjectInspector poi = (PrimitiveObjectInspector) oi;
                 resolvePrimitiveColumn(columnIndex, oi, vectorizedBatch);
             } else {
                 throw new UnsupportedTypeException("Unable to resolve column index:" + columnIndex

@@ -216,7 +216,7 @@ public class HiveTest extends HiveBaseTest {
      *
      * @throws Exception if test fails to run
      */
-    @Test(groups = { "hive", "features", "gpdb", "security" })
+    @Test(groups = {"hive", "features", "gpdb", "security"})
     public void columnSubsetOfPartitionedHiveSchema() throws Exception {
 
         preparePartitionedData();
@@ -225,6 +225,33 @@ public class HiveTest extends HiveBaseTest {
                 PXF_HIVE_SUBSET_FMT_COLS, hivePartitionedTable);
 
         runTincTest("pxf.features.hive.column_subset_partitioned_table.runTest");
+    }
+
+    /**
+     * PXF on Hive Parquet format table, the table is altered after data is
+     * inserted, and the query is still successful after more columns are
+     * added to the Hive schema
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void readHiveTableAfterColumnsAddedToTable() throws Exception {
+
+        prepareParquetForAlterData();
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SMALLDATA_COLS, hiveParquetForAlterTable);
+
+        runTincTest("pxf.features.hive.small_data.runTest");
+
+        hive.runQuery("ALTER TABLE " + hiveParquetForAlterTable.getName() + " ADD COLUMNS (new1 int)");
+        hive.runQuery("INSERT INTO TABLE " + hiveParquetForAlterTable.getName() +
+                " VALUES ('row11', 's_16', 11, 16, 100)");
+
+        // Re-run the test to make sure we can still read the hive table
+        runTincTest("pxf.features.hive.small_data.runTest");
+
+        gpdb.runQuery("ALTER EXTERNAL TABLE " + PXF_HIVE_SMALL_DATA_TABLE + " ADD COLUMN new1 INT");
+        runTincTest("pxf.features.hive.small_data_alter.runTest");
     }
 
     /**

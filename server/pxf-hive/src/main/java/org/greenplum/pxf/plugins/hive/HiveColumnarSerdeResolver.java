@@ -224,8 +224,10 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
                         // This case is invoked only in the top level of fields and
                         // not when interpreting fields of type struct.
                         traverseTuple(null, fields.get(i).getFieldObjectInspector());
-                    } else {
+                    } else if (structIndex < list.size()){
                         traverseTuple(list.get(structIndex), fields.get(i).getFieldObjectInspector());
+                    } else {
+                        traverseTuple(null, fields.get(i).getFieldObjectInspector());
                     }
                 }
                 break;

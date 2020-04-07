@@ -54,6 +54,7 @@ public class HiveRcTest extends HiveBaseTest {
 
         // create RC tables with and without serde mentioned
         hiveRcTable = createRcTableAndLoadData(HIVE_RC_TABLE, true);
+        hiveRcForAlterTable = createRcTableAndLoadData(HIVE_RC_FOR_ALTER_TABLE, true);
         hiveRcTableNoSerde = createRcTableAndLoadData(HIVE_RC_TABLE + "_no_serde", false);
         comparisonDataTable = new Table("comparisonData", null);
     }
@@ -212,8 +213,8 @@ public class HiveRcTest extends HiveBaseTest {
     }
 
     /**
-     * use PXF RC connectors to get data from Hive partitioned table using
-     * specific ColumnarSerDe serde.
+     * Create a Greenplum table with a subset of columns from the original
+     * partitioned Hive table.
      *
      * @throws Exception if test fails to run
      */
@@ -234,6 +235,33 @@ public class HiveRcTest extends HiveBaseTest {
                 PXF_HIVE_SUBSET_FMT_COLS, hiveTable, true);
 
         runTincTest("pxf.features.hive.column_subset_partitioned_table_rc.runTest");
+    }
+
+    /**
+     * PXF on Hive Parquet format table, the table is altered after data is
+     * inserted, and the query is still successful after more columns are
+     * added to the Hive schema
+     *
+     * @throws Exception if test fails to run
+     */
+    @Test(groups = {"hive", "features", "gpdb", "security"})
+    public void readHiveTableAfterColumnsAddedToTable() throws Exception {
+
+        // Create PXF Table using Hive RC profile
+        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
+                PXF_HIVE_SMALLDATA_COLS, hiveRcForAlterTable, true);
+
+        runTincTest("pxf.features.hive.small_data.runTest");
+
+        hive.runQuery("ALTER TABLE " + hiveRcForAlterTable.getName() + " ADD COLUMNS (new1 int)");
+        hive.runQuery("INSERT INTO TABLE " + hiveRcForAlterTable.getName() +
+                " VALUES ('row11', 's_16', 11, 16, 100)");
+
+        // Re-run the test to make sure we can still read the hive table
+        runTincTest("pxf.features.hive.small_data.runTest");
+
+        gpdb.runQuery("ALTER EXTERNAL TABLE " + PXF_HIVE_SMALL_DATA_TABLE + " ADD COLUMN new1 INT");
+        runTincTest("pxf.features.hive.small_data_alter.runTest");
     }
 
     /**

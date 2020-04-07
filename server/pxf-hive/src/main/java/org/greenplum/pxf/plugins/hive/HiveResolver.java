@@ -360,7 +360,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
      * @return true if the partition value is Hive's default partition
      */
     protected boolean isDefaultPartition(String partitionType,
-                                       String partitionValue) {
+                                         String partitionValue) {
         boolean isDefaultPartition = false;
         if (hiveDefaultPartName.equals(partitionValue)) {
             LOG.debug("partition {} is hive default partition (value {})," +
@@ -497,7 +497,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
                 if ((partitionField = getPartitionField(columnDescriptor.columnName())) != null) {
                     // Skip partitioned columns
                     complexRecord.add(partitionField);
-                } else if (i == null) {
+                } else if (i == null || structIndex >= structFields.size()) {
                     // This is a column not present in the file, but defined in greenplum.
                     LOG.warn("Column {} is not present in the source file, but it is defined in the table", columnDescriptor.columnName());
                     addOneFieldToRecord(complexRecord, columnDescriptor.getDataType(), null);

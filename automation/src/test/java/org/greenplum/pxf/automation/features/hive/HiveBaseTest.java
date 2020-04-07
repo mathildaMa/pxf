@@ -175,6 +175,7 @@ public class HiveBaseTest extends BaseFeature {
     static final String HIVE_TYPES_TABLE = "hive_types";
     static final String HIVE_TEXT_TABLE = "hive_text_table";
     static final String HIVE_RC_TABLE = "hive_rc_table";
+    static final String HIVE_RC_FOR_ALTER_TABLE = "hive_rc_alter_table";
     static final String HIVE_ORC_TABLE = "hive_orc_table";
     static final String HIVE_ORC_SNAPPY_TABLE = "hive_orc_snappy";
     static final String HIVE_ORC_ZLIB_TABLE = "hive_orc_zlib";
@@ -183,6 +184,7 @@ public class HiveBaseTest extends BaseFeature {
     static final String HIVE_COLLECTIONS_TABLE = "hive_collections_table";
     static final String HIVE_AVRO_TABLE = "hive_avro_table";
     static final String HIVE_PARQUET_TABLE = "hive_parquet_table";
+    static final String HIVE_PARQUET_FOR_ALTER_TABLE = "hive_parquet_alter_table";
     static final String HIVE_SEQUENCE_TABLE = "hive_sequence_table";
     static final String HIVE_PARTITIONED_TABLE = "hive_partitioned_table";
     static final String HIVE_PARTITIONED_PPD_TABLE = "hive_partitioned_ppd_table";
@@ -222,8 +224,10 @@ public class HiveBaseTest extends BaseFeature {
     HiveTable hiveOrcSnappyTable;
     HiveTable hiveOrcZlibTable;
     HiveTable hiveRcTable;
+    HiveTable hiveRcForAlterTable;
     HiveTable hiveSequenceTable;
     HiveTable hiveParquetTable;
+    HiveTable hiveParquetForAlterTable;
     HiveTable hiveAvroTable;
     HiveTable hiveBinaryTable;
     HiveTable hiveCollectionTable;
@@ -399,6 +403,13 @@ public class HiveBaseTest extends BaseFeature {
         if (hiveParquetTable != null)
             return;
         hiveParquetTable = prepareData(HIVE_PARQUET_TABLE, PARQUET);
+    }
+
+    void prepareParquetForAlterData() throws Exception {
+
+        if (hiveParquetForAlterTable != null)
+            return;
+        hiveParquetForAlterTable = prepareData(HIVE_PARQUET_FOR_ALTER_TABLE, PARQUET);
     }
 
     void prepareAvroData() throws Exception {

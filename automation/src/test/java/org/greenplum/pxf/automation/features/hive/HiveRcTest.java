@@ -325,31 +325,6 @@ public class HiveRcTest extends HiveBaseTest {
         runTincTest("pxf.features.hive.rc_partitions.runTest");
     }
 
-
-    /**
-     * Create GPDB external table without the partition column. check error.
-     *
-     * @throws Exception if test fails to run
-     */
-//    @Test(groups = { "hive", "features", "gpdb", "security" })
-    public void severalRcPartitionsNoPartitionColumn() throws Exception {
-
-        hiveTable = new HiveExternalTable(HIVE_REG_HETEROGEN_TABLE, HIVE_RC_COLS);
-        hiveTable.setPartitionedBy(HIVE_PARTITION_COLUMN);
-        hiveTable.setFormat(FORMAT_ROW);
-        hiveTable.setSerde(COLUMNAR_SERDE);
-        hiveTable.setStoredAs(RCFILE);
-
-        hive.createTableAndVerify(hiveTable);
-        addPartitionsOne(hiveTable, hiveRcTable);
-
-        // Create PXF Table using Hive profile
-        createExternalTable(PXF_HIVE_HETEROGEN_TABLE,
-                PXF_HIVE_SMALLDATA_COLS, hiveTable, true);
-
-        runTincTest("pxf.features.hive.errors.rc_noPartitionColumn.runTest");
-    }
-
     /**
      * Filter partitions columns on external table directed to hive partitioned
      * table The filtering will be done in PXF fragmenter level.

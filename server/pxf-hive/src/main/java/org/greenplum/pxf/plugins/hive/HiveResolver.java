@@ -20,6 +20,7 @@ package org.greenplum.pxf.plugins.hive;
  */
 
 import org.apache.commons.lang.CharUtils;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.hive.common.JavaUtils;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.conf.HiveConf;
@@ -76,8 +77,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 
 /**
  * Class HiveResolver handles deserialization of records that were serialized
@@ -193,7 +192,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
         String[] partitionLevels = partitionKeys.split(HiveDataFragmenter.HIVE_PARTITIONS_DELIM);
         for (String partLevel : partitionLevels) {
             String[] levelKey = partLevel.split(HiveDataFragmenter.HIVE_1_PART_DELIM);
-            String columnName = levelKey[0];
+            String columnName = StringUtils.lowerCase(levelKey[0]);
             String type = levelKey[1];
             String val = levelKey[2];
             DataType convertedType;
@@ -283,7 +282,7 @@ public class HiveResolver extends HivePlugin implements Resolver {
     private boolean columnDescriptorContainsColumn(String columnName) {
         return context.getTupleDescription()
                 .stream()
-                .anyMatch(cd -> columnName.equals(cd.columnName()) || columnName.toLowerCase().equals(cd.columnName()));
+                .anyMatch(cd -> columnName.equals(cd.columnName()));
     }
 
     /*
@@ -464,7 +463,11 @@ public class HiveResolver extends HivePlugin implements Resolver {
                                             StructObjectInspector soi,
                                             boolean toFlatten)
             throws BadRecordException, IOException {
+        // "fields" represents the projected schema
         List<? extends StructField> fields = soi.getAllStructFieldRefs();
+        // structFields contains a list of all values, null for non-projected fields
+        // the number of structFields matches the number of columns on the original hive table
+        // also the order of the structFields matches the hive table schema
         List<Object> structFields = soi.getStructFieldsDataAsList(struct);
         if (structFields == null) {
             throw new BadRecordException("Illegal value NULL for Hive data type Struct");
@@ -485,16 +488,28 @@ public class HiveResolver extends HivePlugin implements Resolver {
             Map<String, Integer> columnNameToStructIndexMap =
                     IntStream.range(0, fields.size())
                             .boxed()
-                            .collect(Collectors.toMap(i -> fields.get(i).getFieldName(), i -> i));
+                            .collect(Collectors.toMap(i -> StringUtils.lowerCase(fields.get(i).getFieldName()), i -> i));
 
             List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
             for (int j = 0; j < tupleDescription.size(); j++) {
                 ColumnDescriptor columnDescriptor = tupleDescription.get(j);
-                Integer i = defaultIfNull(columnNameToStructIndexMap.get(columnDescriptor.columnName()),
-                        columnNameToStructIndexMap.get(columnDescriptor.columnName().toLowerCase()));
+                String lowercaseColumnName = StringUtils.lowerCase(columnDescriptor.columnName());
+                // i is the index of the projected column, this will match j in most
+                // cases, but in some cases where projection information is not passed
+                // to the deserializer, this will not hold true. Let's consider the case
+                // where the hive table is defined as a,b,c,d. The greenplum table
+                // contains a subset of the columns and is defined as c,a. Then fields
+                // will only have two entries, whereas structFields will still have
+                // 4 entries. In this case i will be 0, for the first greenplum column.
+                Integer i = columnNameToStructIndexMap.get(lowercaseColumnName);
+                // structIndex corresponds to the index of the column on hive
+                // for example if the hive table has columns a, b, c, but
+                // Greenplum defines them as c, b, a, hiveIndexes will have values
+                // 2,1,0. And the value of structIndex for the first greenplum
+                // column will be 2
                 Integer structIndex = hiveIndexes.get(j);
 
-                if ((partitionField = getPartitionField(columnDescriptor.columnName())) != null) {
+                if ((partitionField = partitionColumnNames.get(lowercaseColumnName)) != null) {
                     // Skip partitioned columns
                     complexRecord.add(partitionField);
                 } else if (i == null || structIndex >= structFields.size()) {
@@ -513,14 +528,6 @@ public class HiveResolver extends HivePlugin implements Resolver {
         }
 
         return toFlatten ? structRecord : complexRecord;
-    }
-
-    private OneField getPartitionField(String columnName) {
-        OneField oneField = partitionColumnNames.get(columnName);
-        if (oneField == null) {
-            oneField = partitionColumnNames.get(columnName.toLowerCase());
-        }
-        return oneField;
     }
 
     private List<OneField> traverseMap(Object obj, MapObjectInspector moi)

@@ -19,6 +19,7 @@ package org.greenplum.pxf.plugins.hive;
  * under the License.
  */
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
@@ -61,7 +62,6 @@ import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.apache.commons.lang3.ObjectUtils.defaultIfNull;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_ALL_COLUMNS;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_COLUMN_IDS_CONF_STR;
 import static org.apache.hadoop.hive.serde2.ColumnProjectionUtils.READ_COLUMN_NAMES_CONF_STR;
@@ -116,7 +116,7 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
         String[] partitionLevels = partitionKeys.split(HiveDataFragmenter.HIVE_PARTITIONS_DELIM);
         for (String partLevel : partitionLevels) {
             String[] levelKey = partLevel.split(HiveDataFragmenter.HIVE_1_PART_DELIM);
-            partitionColumnNames.put(levelKey[0], levelKey);
+            partitionColumnNames.put(StringUtils.lowerCase(levelKey[0]), levelKey);
         }
     }
 
@@ -204,17 +204,17 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
                 Map<String, Integer> columnNameToStructIndexMap =
                         IntStream.range(0, fields.size())
                                 .boxed()
-                                .collect(Collectors.toMap(i -> fields.get(i).getFieldName(), i -> i));
+                                .collect(Collectors.toMap(i -> StringUtils.lowerCase(fields.get(i).getFieldName()), i -> i));
 
                 List<ColumnDescriptor> tupleDescription = context.getTupleDescription();
                 for (int j = 0; j < tupleDescription.size(); j++) {
                     ColumnDescriptor columnDescriptor = tupleDescription.get(j);
-                    Integer i = defaultIfNull(columnNameToStructIndexMap.get(columnDescriptor.columnName()),
-                            columnNameToStructIndexMap.get(columnDescriptor.columnName().toLowerCase()));
+                    String lowercaseColumnName = StringUtils.lowerCase(columnDescriptor.columnName());
+                    Integer i = columnNameToStructIndexMap.get(lowercaseColumnName);
                     Integer structIndex = hiveIndexes.get(j);
                     String[] levelKey;
 
-                    if ((levelKey = getPartitionField(columnDescriptor.columnName())) != null) {
+                    if ((levelKey = partitionColumnNames.get(lowercaseColumnName)) != null) {
                         // Skip partitioned columns
                         String type = levelKey[1];
                         String val = levelKey[2];
@@ -234,14 +234,6 @@ public class HiveColumnarSerdeResolver extends HiveResolver {
             default:
                 throw new UnsupportedTypeException("Hive object category: " + objInspector.getCategory() + " unsupported");
         }
-    }
-
-    private String[] getPartitionField(String columnName) {
-        String[] levelKey = partitionColumnNames.get(columnName);
-        if (levelKey == null) {
-            levelKey = partitionColumnNames.get(columnName.toLowerCase());
-        }
-        return levelKey;
     }
 
     private void addPartitionColumn(String type, String val) {

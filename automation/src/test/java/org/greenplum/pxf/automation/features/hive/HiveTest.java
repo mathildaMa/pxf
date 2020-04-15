@@ -591,24 +591,6 @@ public class HiveTest extends HiveBaseTest {
     }
 
     /**
-     * If pxf table puts more columns than expected one in hive table,
-     * an error should raise
-     *
-     * @throws Exception if test fails to run
-     */
-    //@Test(groups = {"hive", "features", "gpdb", "security"})
-    @Ignore("we now support column count mismatch for Hive")
-    public void columnCountMisMatch() throws Exception {
-
-        // In pxf table creation a dummy extra column is added so that columns
-        // count from pxf will not match with hive table
-        createExternalTable(PXF_HIVE_SMALL_DATA_TABLE,
-                PXF_HIVE_SMALLDATA_FMT_COLS, hiveSmallDataTable);
-
-        runTincTest("pxf.features.hive.errors.columnCountMisMatch.runTest");
-    }
-
-    /**
      * Tests when the column name doesn't match any of the columns defined at
      * the Greenplum table definition
      *

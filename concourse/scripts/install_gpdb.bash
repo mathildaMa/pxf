@@ -3,7 +3,7 @@
 set -e
 
 : "${GPDB_PKG_DIR:?GPDB_PKG_DIR must be set}"
-: "${PXF_PROTOCOL_EXTENSION_SRC:?PXF_PROTOCOL_EXTENSION_SRC must be set}"
+: "${PXF_SRC:?PXF_SRC must be set}"
 
 BASE_DIR=${PWD}
 
@@ -39,7 +39,7 @@ source "${gphome}/greenplum_path.sh"
 if grep 'CentOS release 6' /etc/centos-release >/dev/null; then
 	source /opt/gcc_env.sh
 fi
-USE_PGXS=1 make -C "${PXF_PROTOCOL_EXTENSION_SRC}" install
+USE_PGXS=1 make -C "${PXF_SRC}/external-table" install
 
 # create symlink to allow pgregress to run (hardcoded to look for /usr/local/greenplum-db-devel/psql)
 rm -rf /usr/local/greenplum-db-devel

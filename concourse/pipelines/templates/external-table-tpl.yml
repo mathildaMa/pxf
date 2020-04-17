@@ -15,14 +15,6 @@ resources:
     uri: {{pxf-git-remote}}
     private_key: ((ccp-git-key))
 
-- name: pxf-protocol-extension_src
-  type: git
-  icon: git
-  source:
-    branch: {{pxf-protocol-extension-git-branch}}
-    uri: {{pxf-protocol-extension-git-remote}}
-    private_key: ((ccp-git-key))
-
 - name: gpdb-pxf-dev-centos6-hdp2-server
   type: docker-image
   icon: docker
@@ -36,15 +28,16 @@ resources:
   source:
     repository: pivotaldata/gpdb-pxf-dev
     tag: centos7-hdp2-server
-
+{% if gpdb_type == "6X_STABLE" %}
 - name: gpdb-pxf-dev-ubuntu18-hdp2-server
   type: docker-image
   icon: docker
   source:
     repository: pivotaldata/gpdb-pxf-dev
     tag: ubuntu18-hdp2-server
+{% endif %}
 
-- name: rhel6_rpm
+- name: gpdb_rhel6_rpm
   type: gcs
   icon: google-drive
   source:
@@ -52,7 +45,7 @@ resources:
     json_key: ((data-gpdb-ud-google-json-key))
     regexp: latest/greenplum-db-(.*)-rhel6-x86_64.rpm
 
-- name: rhel7_rpm
+- name: gpdb_rhel7_rpm
   type: gcs
   icon: google-drive
   source:
@@ -61,7 +54,7 @@ resources:
     regexp: latest/greenplum-db-(.*)-rhel7-x86_64.rpm
 
 {% if gpdb_type == "6X_STABLE" %}
-- name: ubuntu18_deb
+- name: gpdb_ubuntu18_deb
   type: gcs
   icon: google-drive
   source:
@@ -69,7 +62,6 @@ resources:
     json_key: ((data-gpdb-ud-google-json-key))
     regexp: latest/greenplum-db-(.*)-ubuntu18.04-amd64.deb
 {% endif %}
-
 - name: pxf_tarball
   type: s3
   icon: aws
@@ -93,11 +85,11 @@ anchors:
     - |
         limits='gpadmin soft core unlimited\ngpadmin soft nproc 131072\ngpadmin soft nofile 65536'
         echo -e "${limits}" >> /etc/security/limits.d/gpadmin-limits.conf
-        export GROUP=HdfsSmokeTest,WritableSmokeTest PATH=${PWD}/pxf-protocol-extension_src/concourse/scripts:$PATH &&
-        export PXF_PROTOCOL_EXTENSION_SRC="${PWD}/pxf-protocol-extension_src" &&
+        export GROUP=HdfsSmokeTest,WritableSmokeTest "PATH=${PWD}/pxf_src/concourse/scripts:${PATH}" &&
+        export PXF_SRC="${PWD}/pxf_src" GPDB_PKG_DIR=gpdb_package &&
         install_gpdb.bash &&
         su gpadmin "$(command -v initialize_gpdb.bash)" &&
-        test_pxf.bash
+        pgregress_pxf.bash
 
 ## ======================================================================
 ## JOBS
@@ -109,65 +101,56 @@ jobs:
   - in_parallel:
     - get: pxf_src
     - get: pxf_tarball
-    - get: pxf-protocol-extension_src
       trigger: true
     - get: gpdb-pxf-dev-centos6-hdp2-server
-    - get: rhel6_rpm
+    - get: gpdb_package
+      resource: gpdb_rhel6_rpm
   - task: Test Against Greenplum Product Files RHEL6
     image: gpdb-pxf-dev-centos6-hdp2-server
     config:
       platform: linux
       <<: *run_anchor
       inputs:
-      - name: pxf-protocol-extension_src
       - name: pxf_src
       - name: pxf_tarball
-      - name: rhel6_rpm
-      params:
-        GPDB_PKG_DIR: rhel6_rpm
+      - name: gpdb_package
 
 - name: Test PXF Protocol Extension On RHEL7
   plan:
   - in_parallel:
     - get: pxf_src
     - get: pxf_tarball
-    - get: pxf-protocol-extension_src
       trigger: true
     - get: gpdb-pxf-dev-centos7-hdp2-server
-    - get: rhel7_rpm
+    - get: gpdb_package
+      resource: gpdb_rhel7_rpm
   - task: Test Against Greenplum Product Files RHEL7
     image: gpdb-pxf-dev-centos7-hdp2-server
     config:
       platform: linux
       <<: *run_anchor
       inputs:
-      - name: pxf-protocol-extension_src
       - name: pxf_src
       - name: pxf_tarball
-      - name: rhel7_rpm
-      params:
-        GPDB_PKG_DIR: rhel7_rpm
-
+      - name: gpdb_package
 {% if gpdb_type == "6X_STABLE" %}
+
 - name: Test PXF Protocol Extension On Ubuntu18
   plan:
   - in_parallel:
     - get: pxf_src
     - get: pxf_tarball
-    - get: pxf-protocol-extension_src
       trigger: true
     - get: gpdb-pxf-dev-ubuntu18-hdp2-server
-    - get: ubuntu18_deb
+    - get: gpdb_package
+      resource: gpdb_ubuntu18_deb
   - task: Test Against Greenplum Product Files Ubuntu18
     image: gpdb-pxf-dev-ubuntu18-hdp2-server
     config:
       platform: linux
       <<: *run_anchor
       inputs:
-      - name: pxf-protocol-extension_src
       - name: pxf_src
       - name: pxf_tarball
-      - name: ubuntu18_deb
-      params:
-        GPDB_PKG_DIR: ubuntu18_deb
-{% endif gpdb6 %}
+      - name: gpdb_package
+{% endif %}

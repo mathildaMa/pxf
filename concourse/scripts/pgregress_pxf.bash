@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-: "${PGPORT:?PGPORT must be set}"
 : "${GROUP:?GROUP must be set}"
 export GPHOME=/usr/local/greenplum-db
 source "${GPHOME}/greenplum_path.sh"

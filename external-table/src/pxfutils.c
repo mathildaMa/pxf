@@ -1,4 +1,8 @@
 #include "pxfutils.h"
+#if PG_VERSION_NUM >= 90400
+#include "access/htup_details.h"
+#include "catalog/pg_type.h"
+#endif
 #include "utils/formatting.h"
 #include "utils/syscache.h"
 

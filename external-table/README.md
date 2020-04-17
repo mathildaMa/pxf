@@ -15,22 +15,14 @@ configure option. This is required to setup the PXF build environment.
 ### Build the PXF extension
 
 ```
-make
+make USE_PGXS=1
 ```
 
 The build will produce the pxf client shared library named `pxf.so`.
-
-### Run unit tests
-
-This will run the unit tests located in the `test` directory
-
-```
-make unittest-check
-```
  
 ### Install the PXF extension
 ```
-make install
+make USE_PGXS=1 install
 ```
  
 This will copy the `pxf.so` shared library into `$GPHOME/lib/postgresql.`

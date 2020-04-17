@@ -4,23 +4,13 @@ MODULE_big = pxf
 OBJS       = src/pxfprotocol.o src/pxfbridge.o src/pxfuriparser.o src/libchurl.o src/pxfutils.o src/pxfheaders.o src/pxffragment.o src/gpdbwritableformatter.o src/pxffilters.o
 REGRESS    = setup pxf pxfinvalid
 
-ifdef USE_PGXS
-	PGXS := $(shell pg_config --pgxs)
-include $(PGXS)
-else
-	top_builddir = ../..
-	include $(top_builddir)/src/Makefile.global
-	include $(top_builddir)/contrib/contrib-global.mk
+PG_CONFIG = pg_config
+PGXS := $(shell $(PG_CONFIG) --pgxs)
+
+ifndef PGXS
+    $(error Make sure the Greenplum installation binaries are in your PATH. i.e. export PATH=<path to your greenplum installation>/bin:$$PATH)
 endif
 
+include $(PGXS)
+
 SHLIB_LINK += -lcurl
-
-unittest-check:
-	$(MAKE) -C test check
-
-unittest-clean:
-	$(MAKE) -C test clean
-
-clean: unittest-clean
-
-.PHONY: unittest-check unittest-clean

@@ -43,7 +43,11 @@ resources:
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
-    regexp: latest/greenplum-db-(.*)-rhel6-x86_64.rpm
+{% if gpdb_type == "5X_STABLE" %}
+    regexp: latest_gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
+{% else %}
+    regexp: latest_gpdb6/greenplum-db-(.*)-rhel6-x86_64.rpm
+{% endif %}
 
 - name: gpdb_rhel7_rpm
   type: gcs
@@ -51,7 +55,11 @@ resources:
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
-    regexp: latest/greenplum-db-(.*)-rhel7-x86_64.rpm
+{% if gpdb_type == "5X_STABLE" %}
+    regexp: latest_gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
+{% else %}
+    regexp: latest_gpdb6/greenplum-db-(.*)-rhel7-x86_64.rpm
+{% endif %}
 
 {% if gpdb_type == "6X_STABLE" %}
 - name: gpdb_ubuntu18_deb
@@ -60,7 +68,7 @@ resources:
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
-    regexp: latest/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+    regexp: latest_gpdb6/greenplum-db-(.*)-ubuntu18.04-amd64.deb
 {% endif %}
 - name: pxf_tarball
   type: s3
@@ -100,6 +108,7 @@ jobs:
   plan:
   - in_parallel:
     - get: pxf_src
+      trigger: true
     - get: pxf_tarball
       trigger: true
     - get: gpdb-pxf-dev-centos6-hdp2-server
@@ -119,6 +128,7 @@ jobs:
   plan:
   - in_parallel:
     - get: pxf_src
+      trigger: true
     - get: pxf_tarball
       trigger: true
     - get: gpdb-pxf-dev-centos7-hdp2-server
@@ -139,6 +149,7 @@ jobs:
   plan:
   - in_parallel:
     - get: pxf_src
+      trigger: true
     - get: pxf_tarball
       trigger: true
     - get: gpdb-pxf-dev-ubuntu18-hdp2-server

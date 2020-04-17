@@ -1,0 +1,173 @@
+---
+resource_types:
+- name: gcs
+  type: docker-image
+  source:
+    repository: frodenas/gcs-resource
+
+resources:
+
+- name: pxf_src
+  type: git
+  icon: git
+  source:
+    branch: {{pxf-git-branch}}
+    uri: {{pxf-git-remote}}
+    private_key: ((ccp-git-key))
+
+- name: pxf-protocol-extension_src
+  type: git
+  icon: git
+  source:
+    branch: {{pxf-protocol-extension-git-branch}}
+    uri: {{pxf-protocol-extension-git-remote}}
+    private_key: ((ccp-git-key))
+
+- name: gpdb-pxf-dev-centos6-hdp2-server
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: centos6-hdp2-server
+
+- name: gpdb-pxf-dev-centos7-hdp2-server
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: centos7-hdp2-server
+
+- name: gpdb-pxf-dev-ubuntu18-hdp2-server
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: ubuntu18-hdp2-server
+
+- name: rhel6_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-rhel6-x86_64.rpm
+
+- name: rhel7_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-rhel7-x86_64.rpm
+
+{% if gpdb_type == "6X_STABLE" %}
+- name: ubuntu18_deb
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+{% endif %}
+
+- name: pxf_tarball
+  type: s3
+  icon: aws
+  source:
+    access_key_id: {{bucket-access-key-id}}
+    bucket: {{pxf-aws-bucket-name}}
+    region_name: {{aws-region}}
+    secret_access_key: {{bucket-secret-access-key}}
+    versioned_file: pxf_artifacts/((folder-prefix))_((gpdb-branch))/latest/pxf.tar.gz
+
+## ======================================================================
+## ANCHORS
+## ======================================================================
+
+anchors:
+- &run_anchor
+  run:
+    path: sh
+    args:
+    - -exc
+    - |
+        limits='gpadmin soft core unlimited\ngpadmin soft nproc 131072\ngpadmin soft nofile 65536'
+        echo -e "${limits}" >> /etc/security/limits.d/gpadmin-limits.conf
+        export GROUP=HdfsSmokeTest,WritableSmokeTest PATH=${PWD}/pxf-protocol-extension_src/concourse/scripts:$PATH &&
+        export PXF_PROTOCOL_EXTENSION_SRC="${PWD}/pxf-protocol-extension_src" &&
+        install_gpdb.bash &&
+        su gpadmin "$(command -v initialize_gpdb.bash)" &&
+        test_pxf.bash
+
+## ======================================================================
+## JOBS
+## ======================================================================
+
+jobs:
+- name: Test PXF Protocol Extension On RHEL6
+  plan:
+  - in_parallel:
+    - get: pxf_src
+    - get: pxf_tarball
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-centos6-hdp2-server
+    - get: rhel6_rpm
+  - task: Test Against Greenplum Product Files RHEL6
+    image: gpdb-pxf-dev-centos6-hdp2-server
+    config:
+      platform: linux
+      <<: *run_anchor
+      inputs:
+      - name: pxf-protocol-extension_src
+      - name: pxf_src
+      - name: pxf_tarball
+      - name: rhel6_rpm
+      params:
+        GPDB_PKG_DIR: rhel6_rpm
+
+- name: Test PXF Protocol Extension On RHEL7
+  plan:
+  - in_parallel:
+    - get: pxf_src
+    - get: pxf_tarball
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-centos7-hdp2-server
+    - get: rhel7_rpm
+  - task: Test Against Greenplum Product Files RHEL7
+    image: gpdb-pxf-dev-centos7-hdp2-server
+    config:
+      platform: linux
+      <<: *run_anchor
+      inputs:
+      - name: pxf-protocol-extension_src
+      - name: pxf_src
+      - name: pxf_tarball
+      - name: rhel7_rpm
+      params:
+        GPDB_PKG_DIR: rhel7_rpm
+
+{% if gpdb_type == "6X_STABLE" %}
+- name: Test PXF Protocol Extension On Ubuntu18
+  plan:
+  - in_parallel:
+    - get: pxf_src
+    - get: pxf_tarball
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-ubuntu18-hdp2-server
+    - get: ubuntu18_deb
+  - task: Test Against Greenplum Product Files Ubuntu18
+    image: gpdb-pxf-dev-ubuntu18-hdp2-server
+    config:
+      platform: linux
+      <<: *run_anchor
+      inputs:
+      - name: pxf-protocol-extension_src
+      - name: pxf_src
+      - name: pxf_tarball
+      - name: ubuntu18_deb
+      params:
+        GPDB_PKG_DIR: ubuntu18_deb
+{% endif gpdb6 %}

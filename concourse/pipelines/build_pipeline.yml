@@ -1,0 +1,121 @@
+## ======================================================================
+## RESOURCE TYPES
+## ======================================================================
+resource_types:
+- name: gcs
+  type: docker-image
+  source:
+    repository: frodenas/gcs-resource
+
+## ======================================================================
+## RESOURCES
+## ======================================================================
+resources:
+
+## ---------- Github Repos ----------
+- name: pxf-protocol-extension_src
+  type: git
+  icon: git
+  source:
+    branch: ((pxf-protocol-extension-git-branch))
+    uri: ((pxf-protocol-extension-git-remote))
+    private_key: ((ccp-git-key))
+
+## ---------- Docker Images ----------
+- name: gpdb-pxf-dev-centos6
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: centos6
+
+- name: gpdb-pxf-dev-centos7
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: centos7
+
+- name: gpdb-pxf-dev-ubuntu18
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-pxf-dev
+    tag: ubuntu18
+
+## ---------- Product Packages ----------
+- name: gpdb_rhel6_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-rhel6-x86_64.rpm
+
+- name: gpdb_rhel7_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-rhel7-x86_64.rpm
+
+- name: gpdb_ubuntu18_deb
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+
+
+## ======================================================================
+## JOBS
+## ======================================================================
+
+jobs:
+- name: Build PPE on RHEL6
+  plan:
+  - in_parallel:
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-centos6
+    - get: gpdb_package
+      resource: gpdb_rhel6_rpm
+  - task: Build PPE on RHEL6
+    image: gpdb-pxf-dev-centos6
+    file: pxf-protocol-extension_src/concourse/tasks/build.yml
+    params:
+      TARGET_OS: rhel6
+      TARGET_AR: x86_64
+
+- name: Build PPE on RHEL7
+  plan:
+  - in_parallel:
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-centos7
+    - get: gpdb_package
+      resource: gpdb_rhel7_rpm
+  - task: Build PPE on RHEL7
+    image: gpdb-pxf-dev-centos7
+    file: pxf-protocol-extension_src/concourse/tasks/build.yml
+    params:
+      TARGET_OS: rhel7
+      TARGET_AR: x86_64
+
+- name: Build PPE on Ubuntu18
+  plan:
+  - in_parallel:
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: gpdb-pxf-dev-ubuntu18
+    - get: gpdb_package
+      resource: gpdb_ubuntu18_deb
+  - task: Build PPE on Ubuntu18
+    image: gpdb-pxf-dev-ubuntu18
+    file: pxf-protocol-extension_src/concourse/tasks/build.yml
+    params:
+      TARGET_OS: ubuntu18.04
+      TARGET_AR: amd64
+

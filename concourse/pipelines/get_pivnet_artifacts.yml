@@ -1,0 +1,120 @@
+---
+resource_types:
+- name: gcs
+  type: docker-image
+  source:
+    repository: frodenas/gcs-resource
+
+resources:
+
+- name: pxf-protocol-extension_src
+  type: git
+  icon: git
+  source:
+    branch: {{pxf-protocol-extension-git-branch}}
+    uri: {{pxf-protocol-extension-git-remote}}
+    private_key: ((ccp-git-key))
+
+- name: ubuntu18
+  type: docker-image
+  icon: docker
+  source:
+    repository: pivotaldata/gpdb-dev
+    tag: ubuntu18
+
+- name: pivnet_cli
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    versioned_file: pivotal-cf/pivnet-cli/pivnet
+
+- name: gpdb5_rhel6_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest_gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
+
+- name: gpdb5_rhel7_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest_gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
+    initial_path: latest_gpdb5/greenplum-db-0.0.0-rhel7-x86_64.rpm
+
+- name: gpdb6_rhel6_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest_gpdb6/greenplum-db-(.*)-rhel6-x86_64.rpm
+    initial_path: latest_gpdb6/greenplum-db-0.0.0-rhel6-x86_64.rpm
+
+- name: gpdb6_rhel7_rpm
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest_gpdb6/greenplum-db-(.*)-rhel7-x86_64.rpm
+    initial_path: latest_gpdb6/greenplum-db-0.0.0-rhel7-x86_64.rpm
+
+- name: gpdb6_ubuntu18_deb
+  type: gcs
+  icon: google-drive
+  source:
+    bucket: data-gpdb-ud-pivnet-artifacts
+    json_key: ((data-gpdb-ud-google-json-key))
+    regexp: latest_gpdb6/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+    initial_path: latest_gpdb6/greenplum-db-0.0.0-ubuntu18.04-amd64.deb
+
+jobs:
+- name: Get Greenplum Product Files
+  plan:
+  - in_parallel:
+    - get: pxf-protocol-extension_src
+      trigger: true
+    - get: ubuntu18
+    - get: pivnet_cli
+    - get: gpdb5_rhel6_rpm
+    - get: gpdb5_rhel7_rpm
+    - get: gpdb6_rhel6_rpm
+    - get: gpdb6_rhel7_rpm
+    - get: gpdb6_ubuntu18_deb
+  - task: Get Greenplum Product Files
+    # this task will fail on centos6
+    image: ubuntu18
+    file: pxf-protocol-extension_src/concourse/tasks/get_product_files.yml
+    params:
+      GPDB5_RHEL6_RPM_DIR: gpdb5_rhel6_rpm
+      GPDB5_RHEL7_RPM_DIR: gpdb5_rhel7_rpm
+      GPDB6_RHEL6_RPM_DIR: gpdb6_rhel6_rpm
+      GPDB6_RHEL7_RPM_DIR: gpdb6_rhel7_rpm
+      GPDB6_UBUNTU18_DEB_DIR: gpdb6_ubuntu18_deb
+      PIVNET_API_TOKEN: {{public_pivnet_refresh_token}}
+      PIVNET_CLI_DIR: pivnet_cli
+  - in_parallel:
+    - put: pivnet_cli
+      params:
+        file: pivnet_cli/pivnet
+    - put: gpdb5_rhel6_rpm
+      params:
+        file: gpdb5_rhel6_rpm/greenplum-db-5.*-rhel6-x86_64.rpm
+    - put: gpdb5_rhel7_rpm
+      params:
+        file: gpdb5_rhel7_rpm/greenplum-db-5.*-rhel7-x86_64.rpm
+    - put: gpdb6_rhel6_rpm
+      params:
+        file: gpdb6_rhel6_rpm/greenplum-db-6.*-rhel6-x86_64.rpm
+    - put: gpdb6_rhel7_rpm
+      params:
+        file: gpdb6_rhel7_rpm/greenplum-db-6.*-rhel7-x86_64.rpm
+    - put: gpdb6_ubuntu18_deb
+      params:
+        file: gpdb6_ubuntu18_deb/greenplum-db-6.*-ubuntu18.04-amd64.deb

@@ -1,0 +1,30 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+
+inputs:
+- name: pxf-protocol-extension_src
+- name: pivnet_cli
+- name: gpdb5_rhel6_rpm
+- name: gpdb5_rhel7_rpm
+- name: gpdb6_rhel6_rpm
+- name: gpdb6_rhel7_rpm
+- name: gpdb6_ubuntu18_deb
+
+outputs:
+- name: pivnet_cli
+- name: gpdb5_rhel6_rpm
+- name: gpdb5_rhel7_rpm
+- name: gpdb6_rhel6_rpm
+- name: gpdb6_rhel7_rpm
+- name: gpdb6_ubuntu18_deb
+
+params:
+  PIVNET_API_TOKEN:
+  GPDB_PKG_DIR:
+  PRODUCT_SLUG: pivotal-gpdb
+
+run:
+  path: pxf-protocol-extension_src/concourse/scripts/get_product_files.bash

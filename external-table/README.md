@@ -15,14 +15,14 @@ configure option. This is required to setup the PXF build environment.
 ### Build the PXF extension
 
 ```
-make USE_PGXS=1
+make
 ```
 
 The build will produce the pxf client shared library named `pxf.so`.
  
 ### Install the PXF extension
 ```
-make USE_PGXS=1 install
+make install
 ```
  
 This will copy the `pxf.so` shared library into `$GPHOME/lib/postgresql.`

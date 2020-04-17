@@ -1,3 +1,6 @@
+ifndef GPHOME
+$(error GPHOME is not defined)
+endif
 ifndef PXF_CONF
 $(error PXF_CONF is not defined)
 endif
@@ -15,6 +18,8 @@ SUBSTITUTE_COMMAND += --debug
 REGRESS_OPTS += --debug
 endif
 
+pg_regress_installcheck=$(shell find "$$GPHOME" -name pg_regress)
+
 setup_test_dir :
 	mkdir -p /tmp/pxf_automation_data
 
@@ -25,19 +30,35 @@ setup_dirs: setup_test_dir setup_script_dir
 
 fdw_%_schedule : setup_dirs
 	$(SUBSTITUTE_COMMAND) schedules/$@
-	$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw --schedule=schedules/$@
+	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
+	else \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw --schedule=schedules/$@; \
+	fi
 
 %_schedule : setup_dirs
 	$(SUBSTITUTE_COMMAND) schedules/$@
-	$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf --schedule=schedules/$@
+	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
+	else \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf --schedule=schedules/$@; \
+	fi
 
 FDW_%Test : setup_dirs
 	$(SUBSTITUTE_COMMAND) $@
-	$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw _$@
+	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
+	else \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw _$@; \
+	fi
 
 %Test : setup_dirs
 	$(SUBSTITUTE_COMMAND) $@
-	$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf _$@
+	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
+	else \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf _$@; \
+	fi
 
 clean :
 	rm -rf /tmp/pxf_automation_data

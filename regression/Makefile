@@ -29,34 +29,38 @@ setup_script_dir :
 setup_dirs: setup_test_dir setup_script_dir
 
 fdw_%_schedule : setup_dirs
-	$(SUBSTITUTE_COMMAND) schedules/$@
-	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
-		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
+	@if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(SUBSTITUTE_COMMAND) schedules/$@; \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
 	else \
+		$(SUBSTITUTE_COMMAND) schedules/$@; \
 		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw --schedule=schedules/$@; \
 	fi
 
 %_schedule : setup_dirs
-	$(SUBSTITUTE_COMMAND) schedules/$@
-	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
-		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
+	@if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(SUBSTITUTE_COMMAND) schedules/$@; \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) --schedule=schedules/$@; \
 	else \
+		$(SUBSTITUTE_COMMAND) schedules/$@; \
 		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf --schedule=schedules/$@; \
 	fi
 
 FDW_%Test : setup_dirs
-	$(SUBSTITUTE_COMMAND) $@
-	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
-		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
+	@if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(SUBSTITUTE_COMMAND) $@; \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
 	else \
+		$(SUBSTITUTE_COMMAND) $@; \
 		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf_fdw _$@; \
 	fi
 
 %Test : setup_dirs
-	$(SUBSTITUTE_COMMAND) $@
-	if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
-		GPDB_5X_STABLE=1 $(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
+	@if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
+		GPDB_5X_STABLE=1 $(SUBSTITUTE_COMMAND) $@; \
+		$(pg_regress_installcheck) $(REGRESS_OPTS) _$@; \
 	else \
+		$(SUBSTITUTE_COMMAND) $@; \
 		$(pg_regress_installcheck) $(REGRESS_OPTS) --load-extension=pxf _$@; \
 	fi
 

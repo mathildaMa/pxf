@@ -63,11 +63,11 @@ set-pivnet-pipeline:
 		set-pipeline \
 		--check-creds \
 		--pipeline=$(PIVNET_PIPELINE_NAME) \
-		--config=pipelines/get_pivnet_artifacts.yml \
+		--config=pipelines/get_pivnet_artifacts_2_versions.yml \
 		--load-vars-from=$(HOME)/workspace/gp-continuous-integration/secrets/gpdb-6X_STABLE-release-secrets.prod.yml \
 		--load-vars-from=$(HOME)/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-		--var=pxf-protocol-extension-git-branch=6X_STABLE_pipeline \
-		--var=pxf-protocol-extension-git-remote=https://github.com/greenplum-db/pxf-protocol-extension \
+		--var=pxf-git-branch=external-table \
+		--var=pxf-git-remote=https://github.com/greenplum-db/pxf \
 		${FLY_OPTION_NON-INTERACTIVE}
 
 	@echo using the following command to unpause the pipeline:

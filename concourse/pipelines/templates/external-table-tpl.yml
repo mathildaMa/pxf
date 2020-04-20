@@ -1,6 +1,7 @@
 ---
 {# change num_versions manually to download more Greenplum versions #}
-{% set num_versions = 2 %}
+{% set num_5X_versions = 2 %}
+{% set num_6X_versions = 2 %}
 resource_types:
 - name: gcs
   type: docker-image

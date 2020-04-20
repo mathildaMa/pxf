@@ -5,15 +5,13 @@ set -e
 : "${PIVNET_API_TOKEN:?PIVNET_API_TOKEN is required}"
 : "${PIVNET_CLI_DIR:?PIVNET_CLI_DIR is required}"
 : "${VERSION_BEFORE_LATEST:?VERSIONS_BEFORE_LATEST is required}"
-: "${GPDB5_RHEL6_RPM_DIR:?GPDB5_RHEL6_RPM_DIR is required}"
-: "${GPDB5_RHEL7_RPM_DIR:?GPDB5_RHEL7_RPM_DIR is required}"
-: "${GPDB6_RHEL6_RPM_DIR:?GPDB6_RHEL6_RPM_DIR is required}"
-: "${GPDB6_RHEL7_RPM_DIR:?GPDB6_RHEL7_RPM_DIR is required}"
-: "${GPDB6_UBUNTU18_DEB_DIR:?GPDB6_UBUNTU18_DEB_DIR is required}"
+: "${LIST_OF_DIRS:?LIST_OF_DIRS is required}"
+: "${GPDB_VERSION:?GPDB_VERSION is required}"
 : "${PRODUCT_SLUG:?PRODUCT_SLUG is required}"
 
 pivnet_cli_repo=pivotal-cf/pivnet-cli
 PATH=${PIVNET_CLI_DIR}:${PATH}
+
 
 chmod_pivnet() {
 	chmod +x "${PIVNET_CLI_DIR}/pivnet"
@@ -33,44 +31,25 @@ pivnet login "--api-token=${PIVNET_API_TOKEN}"
 
 # get version numbers in sorted order
 # https://stackoverflow.com/questions/57071166/jq-find-the-max-in-quoted-values/57071319#57071319
-gpdb6_version=$(
+gpdb_version=$(
 	pivnet --format=json releases "--product-slug=${PRODUCT_SLUG}" | \
-		jq --raw-output --argjson m "${VERSION_BEFORE_LATEST}" \
-		'sort_by(.version | split(".") | map(tonumber) | select(.[0] == 6))[-1-$m].version'
+		jq --raw-output --argjson gpdb "${GPDB_VERSION}" --argjson m "${VERSION_BEFORE_LATEST}" \
+		'sort_by(.version | split(".") | map(tonumber) | select(.[0] == $gpdb))[-1-$m].version'
 )
-gpdb5_version=$(
-	pivnet --format=json releases "--product-slug=${PRODUCT_SLUG}" | \
-		jq --raw-output --argjson m "${VERSION_BEFORE_LATEST}" \
-		'sort_by(.version | split(".") | map(tonumber) | select(.[0] == 5))[-1-$m].version'
-)
-echo -e "Latest - ${VERSIONS_BEFORE_LATEST} GPDB versions found:\n6X:\t${gpdb6_version}\n5X:\t${gpdb5_version}"
+echo -e "Latest - ${VERSIONS_BEFORE_LATEST} GPDB versions found:\n${GPDB_VERSION}X:\t${gpdb_version}"
 
-product_files=(
-	"product_files/Pivotal-Greenplum/greenplum-db-${gpdb5_version}-rhel6-x86_64.rpm"
-	"product_files/Pivotal-Greenplum/greenplum-db-${gpdb5_version}-rhel7-x86_64.rpm"
-	"product_files/Pivotal-Greenplum/greenplum-db-${gpdb6_version}-rhel6-x86_64.rpm"
-	"product_files/Pivotal-Greenplum/greenplum-db-${gpdb6_version}-rhel7-x86_64.rpm"
-	"product_files/Pivotal-Greenplum/greenplum-db-${gpdb6_version}-ubuntu18.04-amd64.deb"
-)
-product_dirs=(
-	"${GPDB5_RHEL6_RPM_DIR}"
-	"${GPDB5_RHEL7_RPM_DIR}"
-	"${GPDB6_RHEL6_RPM_DIR}"
-	"${GPDB6_RHEL7_RPM_DIR}"
-	"${GPDB6_UBUNTU18_DEB_DIR}"
-)
+IFS=, read -ra product_files_GPDB_VERSION <<<"${LIST_OF_PRODUCTS}"
+for file in "${product_files_GPDB_VERSION[@]}"; do
+	: "product_files/Pivotal-Greenplum/${file/GPDB_VERSION/${gpdb_version}}" # replace with version we are set to grab
+	product_files+=("${_}")
+done
 
-gpdb5_product_files_json=$(pivnet --format=json product-files "--product-slug=${PRODUCT_SLUG}" --release-version "${gpdb5_version}")
-gpdb6_product_files_json=$(pivnet --format=json product-files "--product-slug=${PRODUCT_SLUG}" --release-version "${gpdb6_version}")
+IFS=, read -ra product_dirs <<<"${LIST_OF_DIRS}"
+
+product_files_json=$(pivnet --format=json product-files "--product-slug=${PRODUCT_SLUG}" --release-version "${gpdb_version}")
 for ((i = 0; i < ${#product_files[@]}; i++)); do
 	file=${product_files[$i]}
 	download_path=${product_dirs[$i]}/${file##*/}
-	version=${gpdb5_version}
-	product_files_json=${gpdb5_product_files_json}
-	if [[ ${file} =~ ${gpdb6_version} ]]; then
-		version=${gpdb6_version}
-		product_files_json=${gpdb6_product_files_json}
-	fi
 	if [[ -e ${download_path} ]]; then
 		echo "Found file ${download_path}, checking sha256sum..."
 		sha256=$(jq <<<"${product_files_json}" -r --arg object_key "${file}" '.[] | select(.aws_object_key == $object_key).sha256')

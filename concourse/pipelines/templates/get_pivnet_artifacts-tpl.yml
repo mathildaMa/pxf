@@ -1,6 +1,7 @@
 ---
 {# change num_versions manually to download more Greenplum versions #}
-{% set num_versions = 2 %}
+{% set num_gpdb5_versions = 2 %}
+{% set num_gpdb6_versions = 2 %}
 resource_types:
 - name: gcs
   type: docker-image
@@ -32,7 +33,7 @@ resources:
     json_key: ((data-gpdb-ud-google-json-key))
     versioned_file: pivotal-cf/pivnet-cli/pivnet
 
-{% for version in range(num_versions) %}
+{% for version in range(num_gpdb5_versions) %}
 - name: gpdb5_rhel6_rpm_latest-[[ version ]]
   type: gcs
   icon: google-drive
@@ -49,6 +50,8 @@ resources:
     json_key: ((data-gpdb-ud-google-json-key))
     regexp: latest-[[ version ]]_gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
 
+{% endfor %}
+{% for version in range(num_gpdb6_versions) %}
 - name: gpdb6_rhel6_rpm_latest-[[ version ]]
   type: gcs
   icon: google-drive
@@ -74,10 +77,9 @@ resources:
     regexp: latest-[[ version ]]_gpdb6/greenplum-db-(.*)-ubuntu18.04-amd64.deb
 
 {% endfor %}
-
 jobs:
-{% for version in range(num_versions) %}
-- name: Get Greenplum Product Files Version Latest Minus [[ version ]]
+{% for version in range(num_gpdb5_versions) %}
+- name: Get Greenplum 5 Product Files Version Latest Minus [[ version ]]
   plan:
   - in_parallel:
     - get: pxf_src
@@ -113,11 +115,9 @@ jobs:
         - name: gpdb6_rhel7_rpm_latest-[[ version ]]
         - name: gpdb6_ubuntu18_deb_latest-[[ version ]]
       params:
-        GPDB5_RHEL6_RPM_DIR: gpdb5_rhel6_rpm_latest-[[ version ]]
-        GPDB5_RHEL7_RPM_DIR: gpdb5_rhel7_rpm_latest-[[ version ]]
-        GPDB6_RHEL6_RPM_DIR: gpdb6_rhel6_rpm_latest-[[ version ]]
-        GPDB6_RHEL7_RPM_DIR: gpdb6_rhel7_rpm_latest-[[ version ]]
-        GPDB6_UBUNTU18_DEB_DIR: gpdb6_ubuntu18_deb_latest-[[ version ]]
+        GPDB_VERSION: 5
+        LIST_OF_DIRS: gpdb5_rhel6_rpm_latest-[[ version ]],gpdb5_rhel7_rpm_latest-[[ version ]]
+        LIST_OF_PRODUCTS: greenplum-db-GPDB_VERSION-rhel6-x86_64.rpm,greenplum-db-GPDB_VERSION-rhel7-x86_64.rpm,greenplum-db-GPDB_VERSION-ubuntu18.04-amd64.deb
         PIVNET_API_TOKEN: {{public_pivnet_refresh_token}}
         PIVNET_CLI_DIR: pivnet_cli
         PRODUCT_SLUG: pivotal-gpdb
@@ -131,6 +131,60 @@ jobs:
       params:
         file: pivnet_cli/pivnet
     {% endif %}
+    - put: gpdb5_rhel6_rpm_latest-[[ version ]]
+      params:
+        file: gpdb5_rhel6_rpm_latest-[[ version ]]/greenplum-db-5.*-rhel6-x86_64.rpm
+    - put: gpdb5_rhel7_rpm_latest-[[ version ]]
+      params:
+        file: gpdb5_rhel7_rpm_latest-[[ version ]]/greenplum-db-5.*-rhel7-x86_64.rpm
+    - put: gpdb6_rhel6_rpm_latest-[[ version ]]
+      params:
+        file: gpdb6_rhel6_rpm_latest-[[ version ]]/greenplum-db-6.*-rhel6-x86_64.rpm
+    - put: gpdb6_rhel7_rpm_latest-[[ version ]]
+      params:
+        file: gpdb6_rhel7_rpm_latest-[[ version ]]/greenplum-db-6.*-rhel7-x86_64.rpm
+    - put: gpdb6_ubuntu18_deb_latest-[[ version ]]
+      params:
+        file: gpdb6_ubuntu18_deb_latest-[[ version ]]/greenplum-db-6.*-ubuntu18.04-amd64.deb
+{% endfor %}
+
+{% for version in range(num_gpdb6_versions) %}
+- name: Get Greenplum 6 Product Files Version Latest Minus [[ version ]]
+  plan:
+  - in_parallel:
+    - get: pxf_src
+      trigger: true
+    - get: ubuntu18
+    - get: pivnet_cli
+    - get: gpdb6_rhel6_rpm_latest-[[ version ]]
+    - get: gpdb6_rhel7_rpm_latest-[[ version ]]
+    - get: gpdb6_ubuntu18_deb_latest-[[ version ]]
+  - task: Get Greenplum Product Files
+    # this task will fail on centos6
+    image: ubuntu18
+    config:
+      platform: linux
+      inputs:
+        - name: pxf_src
+        - name: pivnet_cli
+        - name: gpdb6_rhel6_rpm_latest-[[ version ]]
+        - name: gpdb6_rhel7_rpm_latest-[[ version ]]
+        - name: gpdb6_ubuntu18_deb_latest-[[ version ]]
+      outputs:
+        - name: gpdb6_rhel6_rpm_latest-[[ version ]]
+        - name: gpdb6_rhel7_rpm_latest-[[ version ]]
+        - name: gpdb6_ubuntu18_deb_latest-[[ version ]]
+      params:
+        GPDB_VERSION: 6
+        LIST_OF_DIRS: gpdb6_rhel6_rpm_latest-[[ version ]],gpdb6_rhel7_rpm_latest-[[ version ]],gpdb6_ubuntu18_deb_latest-[[ version ]]
+        LIST_OF_PRODUCTS: greenplum-db-GPDB_VERSION-rhel6-x86_64.rpm,greenplum-db-GPDB_VERSION-rhel7-x86_64.rpm,greenplum-db-GPDB_VERSION-ubuntu18.04-amd64.deb
+        PIVNET_API_TOKEN: {{public_pivnet_refresh_token}}
+        PIVNET_CLI_DIR: pivnet_cli
+        PRODUCT_SLUG: pivotal-gpdb
+        VERSION_BEFORE_LATEST: [[ version ]]
+      run:
+        path: pxf_src/concourse/scripts/get_product_files.bash
+  - in_parallel:
     - put: gpdb5_rhel6_rpm_latest-[[ version ]]
       params:
         file: gpdb5_rhel6_rpm_latest-[[ version ]]/greenplum-db-5.*-rhel6-x86_64.rpm

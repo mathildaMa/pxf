@@ -30,7 +30,8 @@ resources:
     json_key: ((data-gpdb-ud-google-json-key))
     versioned_file: pivotal-cf/pivnet-cli/pivnet
 
-{% for version in range(2) %}
+{% set num_versions = 2 %}
+{% for version in range(num_versions) %}
 - name: gpdb5_rhel6_rpm_latest-[[ version ]]
   type: gcs
   icon: google-drive
@@ -74,7 +75,7 @@ resources:
 {% endfor %}
 
 jobs:
-{% for version in range(2) %}
+{% for version in range(num_versions) %}
 - name: Get Greenplum Product Files Version Latest Minus [[ version ]]
   plan:
   - in_parallel:

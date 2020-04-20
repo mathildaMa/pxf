@@ -65,7 +65,7 @@ for ((i = 0; i < ${#product_files[@]}; i++)); do
 	pivnet download-product-files \
 		"--download-dir=${product_dirs[$i]}" \
 		"--product-slug=${PRODUCT_SLUG}" \
-		"--release-version=${version}" \
+		"--release-version=${gpdb_version}" \
 		"--product-file-id=${id}" >/dev/null 2>&1 &
 	pids+=($!)
 done

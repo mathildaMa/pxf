@@ -1,7 +1,11 @@
 ---
 {# change num_versions manually to download more Greenplum versions #}
-{% set num_5X_versions = 2 %}
-{% set num_6X_versions = 2 %}
+{% set num_gpdb5_versions = 10 %}
+{% set num_gpdb6_versions = 2 %}
+{% set num_versions = num_gpdb5_versions %}
+{% if gpdb_type == '6X_STABLE' %}
+  {% set num_versions = num_gpdb6_versions %}
+{% endif %}
 resource_types:
 - name: gcs
   type: docker-image
@@ -32,6 +36,7 @@ resources:
     repository: pivotaldata/gpdb-pxf-dev
     tag: centos7-hdp2-server
 {% if gpdb_type == "6X_STABLE" %}
+
 - name: gpdb-pxf-dev-ubuntu18-hdp2-server
   type: docker-image
   icon: docker

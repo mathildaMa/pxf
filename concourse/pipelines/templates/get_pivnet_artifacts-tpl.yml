@@ -1,6 +1,6 @@
 ---
 {# change num_versions manually to download more Greenplum versions #}
-{% set num_gpdb5_versions = 2 %}
+{% set num_gpdb5_versions = 10 %}
 {% set num_gpdb6_versions = 2 %}
 resource_types:
 - name: gcs

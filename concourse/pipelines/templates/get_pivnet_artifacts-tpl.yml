@@ -112,7 +112,7 @@ jobs:
         PIVNET_API_TOKEN: {{public_pivnet_refresh_token}}
         PIVNET_CLI_DIR: pivnet_cli
         PRODUCT_SLUG: pivotal-gpdb
-        VERSION_BEFORE_LATEST: [[ version ]]
+        VERSIONS_BEFORE_LATEST: [[ version ]]
       run:
         path: pxf_src/concourse/scripts/get_product_files.bash
   - in_parallel:
@@ -163,7 +163,7 @@ jobs:
         PIVNET_API_TOKEN: {{public_pivnet_refresh_token}}
         PIVNET_CLI_DIR: pivnet_cli
         PRODUCT_SLUG: pivotal-gpdb
-        VERSION_BEFORE_LATEST: [[ version ]]
+        VERSIONS_BEFORE_LATEST: [[ version ]]
       run:
         path: pxf_src/concourse/scripts/get_product_files.bash
   - in_parallel:

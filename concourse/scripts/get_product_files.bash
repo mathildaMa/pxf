@@ -4,7 +4,7 @@ set -e
 
 : "${PIVNET_API_TOKEN:?PIVNET_API_TOKEN is required}"
 : "${PIVNET_CLI_DIR:?PIVNET_CLI_DIR is required}"
-: "${VERSION_BEFORE_LATEST:?VERSIONS_BEFORE_LATEST is required}"
+: "${VERSIONS_BEFORE_LATEST:?VERSIONS_BEFORE_LATEST is required}"
 : "${LIST_OF_DIRS:?LIST_OF_DIRS is required}"
 : "${GPDB_VERSION:?GPDB_VERSION is required}"
 : "${PRODUCT_SLUG:?PRODUCT_SLUG is required}"
@@ -33,7 +33,7 @@ pivnet login "--api-token=${PIVNET_API_TOKEN}"
 # https://stackoverflow.com/questions/57071166/jq-find-the-max-in-quoted-values/57071319#57071319
 gpdb_version=$(
 	pivnet --format=json releases "--product-slug=${PRODUCT_SLUG}" | \
-		jq --raw-output --argjson gpdb "${GPDB_VERSION}" --argjson m "${VERSION_BEFORE_LATEST}" \
+		jq --raw-output --argjson gpdb "${GPDB_VERSION}" --argjson m "${VERSIONS_BEFORE_LATEST}" \
 		'sort_by(.version | split(".") | map(tonumber) | select(.[0] == $gpdb))[-1-$m].version'
 )
 echo -e "Latest - ${VERSIONS_BEFORE_LATEST} GPDB versions found:\n${GPDB_VERSION}X:\t${gpdb_version}"

@@ -18,6 +18,7 @@ SUBSTITUTE_COMMAND += --debug
 REGRESS_OPTS += --debug
 endif
 
+# we get this variable for free on 6X, but not on 5X
 pg_regress_installcheck=$(shell find "$$GPHOME" -name pg_regress)
 
 setup_test_dir :
@@ -28,6 +29,8 @@ setup_script_dir :
 
 setup_dirs: setup_test_dir setup_script_dir
 
+# 5X (Postgres 8) has no --load-extension flag (see targets below)
+# substitute.bash handles extension loading and different 5X/6X COPY syntax
 fdw_%_schedule : setup_dirs
 	@if $(PG_CONFIG) | grep -q 'VERSION.*PostgreSQL 8'; then \
 		GPDB_5X_STABLE=1 $(SUBSTITUTE_COMMAND) schedules/$@; \

@@ -1,4 +1,6 @@
 ---
+{# change num_versions manually to download more Greenplum versions #}
+{% set num_versions = 2 %}
 resource_types:
 - name: gcs
   type: docker-image
@@ -37,39 +39,41 @@ resources:
     tag: ubuntu18-hdp2-server
 {% endif %}
 
-- name: gpdb_rhel6_rpm
+{% for version in range(num_versions) %}
+- name: gpdb_rhel6_rpm_latest-[[ version ]]
   type: gcs
   icon: google-drive
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
 {% if gpdb_type == "5X_STABLE" %}
-    regexp: latest_gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
+    regexp: latest-[[ version ]]_gpdb5/greenplum-db-(.*)-rhel6-x86_64.rpm
 {% else %}
-    regexp: latest_gpdb6/greenplum-db-(.*)-rhel6-x86_64.rpm
+    regexp: latest-[[ version ]]_gpdb6/greenplum-db-(.*)-rhel6-x86_64.rpm
 {% endif %}
 
-- name: gpdb_rhel7_rpm
+- name: gpdb_rhel7_rpm_latest-[[ version ]]
   type: gcs
   icon: google-drive
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
 {% if gpdb_type == "5X_STABLE" %}
-    regexp: latest_gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
+    regexp: latest-[[ version ]]_gpdb5/greenplum-db-(.*)-rhel7-x86_64.rpm
 {% else %}
-    regexp: latest_gpdb6/greenplum-db-(.*)-rhel7-x86_64.rpm
+    regexp: latest-[[ version ]]_gpdb6/greenplum-db-(.*)-rhel7-x86_64.rpm
 {% endif %}
-
 {% if gpdb_type == "6X_STABLE" %}
-- name: gpdb_ubuntu18_deb
+- name: gpdb_ubuntu18_deb_latest-[[ version ]]
   type: gcs
   icon: google-drive
   source:
     bucket: data-gpdb-ud-pivnet-artifacts
     json_key: ((data-gpdb-ud-google-json-key))
-    regexp: latest_gpdb6/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+    regexp: latest-[[ version ]]_gpdb6/greenplum-db-(.*)-ubuntu18.04-amd64.deb
+
 {% endif %}
+{% endfor %}
 - name: pxf_tarball
   type: s3
   icon: aws
@@ -104,7 +108,8 @@ anchors:
 ## ======================================================================
 
 jobs:
-- name: Test PXF Protocol Extension On RHEL6
+{% for version in range(num_versions) %}
+- name: Test PXF Against Latest Minus [[ version ]] GPDB On RHEL6
   plan:
   - in_parallel:
     - get: pxf_src
@@ -113,7 +118,7 @@ jobs:
       trigger: true
     - get: gpdb-pxf-dev-centos6-hdp2-server
     - get: gpdb_package
-      resource: gpdb_rhel6_rpm
+      resource: gpdb_rhel6_rpm_latest-[[ version ]]
   - task: Test Against Greenplum Product Files RHEL6
     image: gpdb-pxf-dev-centos6-hdp2-server
     config:
@@ -124,7 +129,7 @@ jobs:
       - name: pxf_tarball
       - name: gpdb_package
 
-- name: Test PXF Protocol Extension On RHEL7
+- name: Test PXF Against Latest Minus [[ version ]] GPDB On RHEL7
   plan:
   - in_parallel:
     - get: pxf_src
@@ -133,7 +138,7 @@ jobs:
       trigger: true
     - get: gpdb-pxf-dev-centos7-hdp2-server
     - get: gpdb_package
-      resource: gpdb_rhel7_rpm
+      resource: gpdb_rhel7_rpm_latest-[[ version ]]
   - task: Test Against Greenplum Product Files RHEL7
     image: gpdb-pxf-dev-centos7-hdp2-server
     config:
@@ -145,7 +150,7 @@ jobs:
       - name: gpdb_package
 {% if gpdb_type == "6X_STABLE" %}
 
-- name: Test PXF Protocol Extension On Ubuntu18
+- name: Test PXF Against Latest Minus [[ version ]] GPDB On Ubuntu18
   plan:
   - in_parallel:
     - get: pxf_src
@@ -154,7 +159,7 @@ jobs:
       trigger: true
     - get: gpdb-pxf-dev-ubuntu18-hdp2-server
     - get: gpdb_package
-      resource: gpdb_ubuntu18_deb
+      resource: gpdb_ubuntu18_deb_latest-[[ version ]]
   - task: Test Against Greenplum Product Files Ubuntu18
     image: gpdb-pxf-dev-ubuntu18-hdp2-server
     config:
@@ -165,3 +170,4 @@ jobs:
       - name: pxf_tarball
       - name: gpdb_package
 {% endif %}
+{% endfor %}

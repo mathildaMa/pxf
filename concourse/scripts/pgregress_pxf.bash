@@ -42,7 +42,7 @@ function run_pxf_automation() {
 		set -exo pipefail
 
 		source ${GPHOME}/greenplum_path.sh
-		psql -p ${PGPORT} -d template1 -c 'CREATE EXTENSION PXF'
+		psql -p 5432 -d template1 -c 'CREATE EXTENSION PXF'
 
 		export PATH=\$PATH:${GPHD_ROOT}/bin
 		export GPHD_ROOT=${GPHD_ROOT}
@@ -151,7 +151,7 @@ start_pxf_server
 JAVA_HOME="${JAVA_HOME}" init_hdfs
 
 if [[ -n ${AUTOMATION} ]]; then
-	run_pxf_automation_test
+	run_pxf_automation
 else
 	run_pg_regress
 fi

@@ -68,7 +68,7 @@ def how_to_use_generated_pipeline_message():
     m += '  Template file ............ : %s\n' % ARGS.template_filename
     m += '======================================================================\n\n'
 
-    cmd = '/usr/local/bin/fly -t ' + ARGS.TARGET + ' set-pipeline \\\n'
+    cmd = '/usr/local/bin/fly -t ' + ARGS.TARGET + ' set-pipeline --check-creds \\\n'
     cmd += '    -c ' + ARGS.output_filepath + ' \\\n'
     cmd += '    -l ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \\\n'
     cmd += '    -l ~/workspace/pxf/concourse/settings/pxf-multinode-params.yml \\\n'

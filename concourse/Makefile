@@ -5,8 +5,11 @@ CONCOURSE ?= ud
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 
 BUILD_PIPELINE_NAME        = pxf-protocol-extension-build_6X_STABLE
-BC_PIPELINE_NAME           = pxf-protocol-extension-BC_6X_STABLE
+BC_5X_PIPELINE_NAME        = pgregress_external_table_5X_STABLE
+BC_6X_PIPELINE_NAME        = pgregress_external_table_6X_STABLE
 PIVNET_PIPELINE_NAME       = pivnet_artifacts
+NUM_GPDB5_VERSIONS        ?= 11
+NUM_GPDB6_VERSIONS        ?=  9
 FLY_CMD                    = /usr/local/bin/fly
 DEPLOY_CMD                 = ./deploy
 FLY_OPTION_NON-INTERACTIVE =
@@ -32,25 +35,28 @@ set-build-pipeline:
 	@echo using the following command to unpause the pipeline:
 	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BUILD_PIPELINE_NAME}"
 
-.PHONY: set-BC
-set-BC: set-BC-pipeline
+.PHONY: set-BC-5X
+set-BC-5X: set-BC-5X-pipeline
 
-.PHONY: set-BC-pipeline
-set-BC-pipeline:
-	$(FLY_CMD) --target=$(CONCOURSE) \
-		set-pipeline \
-		--check-creds \
-		--pipeline=$(BC_PIPELINE_NAME) \
-		--config=pipelines/pxf-protocol-extension_pipeline.yml \
-		--load-vars-from=$(HOME)/workspace/gp-continuous-integration/secrets/gpdb-6X_STABLE-release-secrets.prod.yml \
-		--load-vars-from=$(HOME)/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
-		--var=pxf-protocol-extension-git-branch=6X_STABLE_pipeline \
-		--var=pxf-protocol-extension-git-remote=https://github.com/greenplum-db/pxf-protocol-extension \
-		--var=pxf-git-branch=fix_pgregress_external_table \
-		--var=pxf-git-remote=https://github.com/greenplum-db/pxf \
-		--var=folder-prefix=prod/gpdb_branch \
-		--var=gpdb-branch=6X_STABLE \
-		${FLY_OPTION_NON-INTERACTIVE}
+.PHONY: set-BC-5X-pipeline
+set-BC-5X-pipeline:
+	@$(DEPLOY_CMD) --output /tmp/pgregress_5x_generated.yml \
+	--num_gpdb5_versions 11 \
+	--pipeline_name $(BC_5X_PIPELINE_NAME) \
+	--template external-table-tpl.yml dev 5x
+
+	@echo using the following command to unpause the pipeline:
+	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_PIPELINE_NAME}"
+
+.PHONY: set-BC-6X
+set-BC-6X: set-BC-6X-pipeline
+
+.PHONY: set-BC-6X-pipeline
+set-BC-6X-pipeline:
+	@$(DEPLOY_CMD) --output /tmp/pgregress_6x_generated.yml \
+	--num_gpdb6_versions 9 \
+	--pipeline_name $(BC_6X_PIPELINE_NAME) \
+	--template external-table-tpl.yml dev 6x
 
 	@echo using the following command to unpause the pipeline:
 	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_PIPELINE_NAME}"

@@ -31,6 +31,37 @@ function run_pg_regress() {
 	su gpadmin -c ~gpadmin/run_pxf_automation_test.sh
 }
 
+function run_pxf_automation() {
+	ln -s "${PWD}/pxf_src" ~gpadmin/pxf_src
+
+	# Let's make sure that automation/singlecluster directories are writeable
+	chmod a+w pxf_src/automation /singlecluster || true
+	find pxf_src/automation/tinc* -type d -exec chmod a+w {} \;
+
+	cat > ~gpadmin/run_pxf_automation_test.sh <<-EOF
+		set -exo pipefail
+
+		source ${GPHOME}/greenplum_path.sh
+		psql -p ${PGPORT} -d template1 -c 'CREATE EXTENSION PXF'
+
+		export PATH=\$PATH:${GPHD_ROOT}/bin
+		export GPHD_ROOT=${GPHD_ROOT}
+		export PXF_HOME=${PXF_HOME}
+		export PGPORT=5432
+
+		# JAVA_HOME is from pxf_common.bash
+		export JAVA_HOME=${JAVA_HOME}
+
+		cd pxf_src/automation
+		make GROUP=${GROUP}
+	EOF
+
+	chown gpadmin:gpadmin ~gpadmin/run_pxf_automation_test.sh
+	chmod a+x ~gpadmin/run_pxf_automation_test.sh
+
+	su gpadmin -c ~gpadmin/run_pxf_automation_test.sh
+}
+
 function install_pxf_server() {
 	tar -xzf pxf_tarball/pxf.tar.gz -C ${GPHOME}
 	chown -R gpadmin:gpadmin "${PXF_HOME}"
@@ -54,6 +85,16 @@ function init_and_configure_pxf_server() {
 	su gpadmin -c "JAVA_HOME=${JAVA_HOME} PXF_CONF=${PXF_CONF_DIR} ${PXF_HOME}/bin/pxf init"
 	# copy hadoop config files to PXF_CONF_DIR/servers/default
 	[[ -d /etc/hadoop/conf/ ]] && cp /etc/hadoop/conf/*-site.xml "${PXF_CONF_DIR}/servers/default"
+	[[ -d /etc/hive/conf/ ]] && cp /etc/hive/conf/*-site.xml "${PXF_CONF_DIR}/servers/default"
+	[[ -d /etc/hbase/conf/ ]] && cp /etc/hbase/conf/*-site.xml "${PXF_CONF_DIR}/servers/default"
+	if [[ ${IMPERSONATION} == true ]]; then
+		cp -r "${PXF_CONF_DIR}/servers/default" "${PXF_CONF_DIR}/servers/default-no-impersonation"
+
+		sed -e "/<name>pxf.service.user.impersonation<\/name>/ {n;s|<value>.*</value>|<value>false</value>|g;}" \
+			-e "/<name>pxf.service.user.name<\/name>/ {n;s|<value>.*</value>|<value>foobar</value>|g;}" \
+			"${PXF_CONF_DIR}/templates/pxf-site.xml" \
+			>"${PXF_CONF_DIR}/servers/default-no-impersonation/pxf-site.xml"
+	fi
 }
 
 function init_hdfs() {
@@ -109,4 +150,8 @@ start_pxf_server
 
 JAVA_HOME="${JAVA_HOME}" init_hdfs
 
-run_pg_regress
+if [[ -n ${AUTOMATION} ]]; then
+	run_pxf_automation_test
+else
+	run_pg_regress
+fi

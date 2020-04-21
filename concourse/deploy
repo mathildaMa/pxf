@@ -45,7 +45,9 @@ def create_pipeline():
         'acceptance': ARGS.acceptance,
         'gpdb_type': ARGS.gpdb_branch,
         'gpdb_branch': ARGS.actual_gpdb_branch,
-        'deploy_env': ARGS.deploy_env
+        'deploy_env': ARGS.deploy_env,
+        'num_gpdb5_versions': ARGS.num_gpdb5_versions,
+        'num_gpdb6_versions': ARGS.num_gpdb6_versions
     }
 
     pipeline_yml = render_template(ARGS.template_filename, context)
@@ -129,6 +131,18 @@ def build_parser(output_filename):
                             action='store',
                             default= get_current_branch(),
                             help='PXF Branch')
+
+    pxf_parser.add_argument('-v', '--num_gpdb5_versions',
+                            type=int,
+                            action='store',
+                            dest='num_gpdb5_versions',
+                            help='number of GPDB 5 versions to fetch/test against')
+
+    pxf_parser.add_argument('-V', '--num_gpdb6_versions',
+                            type=int,
+                            action='store',
+                            dest='num_gpdb6_versions',
+                            help='number of GPDB 6 versions to fetch/test against')
 
     # When you compile your own GPDB branch
     pxf_parser.add_argument('-b', '--branch',

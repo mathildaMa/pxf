@@ -10,7 +10,7 @@ BC_6X_PIPELINE_NAME        = pgregress_external_table_6X_STABLE
 PIVNET_PIPELINE_NAME       = pivnet_artifacts
 NUM_GPDB5_VERSIONS        ?= 11
 NUM_GPDB6_VERSIONS        ?=  9
-FLY_CMD                    = /usr/local/bin/fly
+FLY_CMD                    = fly
 DEPLOY_CMD                 = ./deploy
 FLY_OPTION_NON-INTERACTIVE =
 
@@ -46,7 +46,7 @@ set-BC-5X-pipeline:
 	--template external-table-tpl.yml dev 5x
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_PIPELINE_NAME}"
+	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_5X_PIPELINE_NAME}"
 
 .PHONY: set-BC-6X
 set-BC-6X: set-BC-6X-pipeline
@@ -59,7 +59,7 @@ set-BC-6X-pipeline:
 	--template external-table-tpl.yml dev 6x
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_PIPELINE_NAME}"
+	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_6X_PIPELINE_NAME}"
 
 .PHONY: set-pivnet
 set-pivnet: set-pivnet-pipeline

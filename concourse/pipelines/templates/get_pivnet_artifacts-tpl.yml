@@ -10,6 +10,16 @@ resource_types:
 
 resources:
 
+- name: every-night
+  type: time
+  icon: clock-outline
+  source:
+    interval: 24h
+    location: America/Los_Angeles
+    start: 2:00 AM
+    stop: 3:00 AM
+    days: [Monday, Friday]
+
 - name: pxf_src
   type: git
   icon: git
@@ -82,8 +92,9 @@ jobs:
 - name: Get Greenplum 5 Product Files Version Latest Minus [[ version ]]
   plan:
   - in_parallel:
-    - get: pxf_src
+    - get: every-night
       trigger: true
+    - get: pxf_src
     - get: ubuntu18
     - get: pivnet_cli
     - get: gpdb5_rhel6_rpm_latest-[[ version ]]
@@ -134,8 +145,9 @@ jobs:
 - name: Get Greenplum 6 Product Files Version Latest Minus [[ version ]]
   plan:
   - in_parallel:
-    - get: pxf_src
+    - get: every-night
       trigger: true
+    - get: pxf_src
     - get: ubuntu18
     - get: pivnet_cli
     - get: gpdb6_rhel6_rpm_latest-[[ version ]]

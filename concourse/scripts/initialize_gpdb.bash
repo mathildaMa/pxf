@@ -25,17 +25,12 @@ sudo chmod u+s /bin/ping
 pgrep sshd || sudo /usr/sbin/sshd
 gpssh-exkeys -f /tmp/hosts.txt
 
-if pg_config | grep 'VERSION.*PostgreSQL 8'; then
-	# 5X gpinitsystem returns 1 exit code on warnings.
-	# so we ignore return code of 1, but otherwise we fail
-	set +e
-	gpinitsystem -a -c ~gpadmin/gpconfigs/gpinitsystem_config -h /tmp/hosts.txt --su_password=changeme
-	(( $? > 1 )) && exit 1
-	set -e
-else
-	# 6X gpinitsystem added a flag to ignore warnings
-	gpinitsystem --ignore-warnings -a -c ~gpadmin/gpconfigs/gpinitsystem_config -h /tmp/hosts.txt --su_password=changeme
-fi
+# 5X gpinitsystem returns 1 exit code on warnings.
+# so we ignore return code of 1, but otherwise we fail
+set +e
+gpinitsystem -a -c ~gpadmin/gpconfigs/gpinitsystem_config -h /tmp/hosts.txt --su_password=changeme
+(( $? > 1 )) && exit 1
+set -e
 
 echo 'host all all 0.0.0.0/0 password' >>~gpadmin/data/master/gpseg-1/pg_hba.conf
 

@@ -1,7 +1,7 @@
 ---
 {# change num_versions manually to download more Greenplum versions #}
 {% set num_gpdb5_versions = 11 %}
-{% set num_gpdb6_versions = 2 %}
+{% set num_gpdb6_versions = 9 %}
 {% set num_versions = num_gpdb5_versions %}
 {% if gpdb_type == '6X_STABLE' %}
   {% set num_versions = num_gpdb6_versions %}

@@ -4,14 +4,15 @@ CONCOURSE ?= ud
 # set the pxf-protocol-extension default branch to current branch
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
 
+SHELL = /bin/bash
 BUILD_PIPELINE_NAME        = pxf-protocol-extension-build_6X_STABLE
 BC_5X_PIPELINE_NAME        = pgregress_external_table_5X_STABLE
 BC_6X_PIPELINE_NAME        = pgregress_external_table_6X_STABLE
 PIVNET_PIPELINE_NAME       = pivnet_artifacts
 NUM_GPDB5_VERSIONS        ?= 11
 NUM_GPDB6_VERSIONS        ?=  9
-FLY_CMD                    = fly
-DEPLOY_CMD                 = ./deploy
+FLY_CMD                    = /usr/local/bin/fly
+DEPLOY_CMD                 = ./simple-deploy
 FLY_OPTION_NON-INTERACTIVE =
 
 .PHONY: set-build
@@ -33,7 +34,7 @@ set-build-pipeline:
 		${FLY_OPTION_NON-INTERACTIVE}
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BUILD_PIPELINE_NAME}"
+	@echo -e "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BUILD_PIPELINE_NAME}"
 
 .PHONY: set-BC-5X
 set-BC-5X: set-BC-5X-pipeline
@@ -46,7 +47,7 @@ set-BC-5X-pipeline:
 	--template external-table-tpl.yml dev 5x
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_5X_PIPELINE_NAME}"
+	@echo -e "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_5X_PIPELINE_NAME}"
 
 .PHONY: set-BC-6X
 set-BC-6X: set-BC-6X-pipeline
@@ -59,20 +60,25 @@ set-BC-6X-pipeline:
 	--template external-table-tpl.yml dev 6x
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_6X_PIPELINE_NAME}"
+	@echo -e "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${BC_6X_PIPELINE_NAME}"
 
 .PHONY: set-pivnet
 set-pivnet: set-pivnet-pipeline
 
 .PHONY: set-pivnet-pipeline
 set-pivnet-pipeline:
-	@$(DEPLOY_CMD) --num_gpdb5_versions 11 --num_gpdb6_versions 9 \
-		--pipeline_name $(PIVNET_PIPELINE_NAME) --pipeline_type pivnet \
-		--output /tmp/get_pivnet_artifacts.yml \
-		--template get_pivnet_artifacts-tpl.yml dev 5x
+	@$(FLY_CMD) --target=$(CONCOURSE) \
+		set-pipeline \
+		--check-creds \
+		--config <($(DEPLOY_CMD) --template get_pivnet_artifacts-tpl.yml --vars num_gpdb5_versions=$(NUM_GPDB5_VERSIONS) num_gpdb6_versions=$(NUM_GPDB6_VERSIONS)) \
+		--var pxf-git-branch=external-table \
+		--var pxf-git-remote=https://github.com/greenplum-db/pxf \
+		--load-vars-from ~/workspace/gp-continuous-integration/secrets/pxf-pivnet-secrets.yml \
+		--load-vars-from ~/workspace/gp-continuous-integration/secrets/gpdb_common-ci-secrets.yml \
+		--pipeline pivnet_artifacts
 
 	@echo using the following command to unpause the pipeline:
-	@echo "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${PIVNET_PIPELINE_NAME}"
+	@echo -e "\t$(FLY_CMD) -t ${CONCOURSE} unpause-pipeline --pipeline ${PIVNET_PIPELINE_NAME}"
 
 ## ----------------------------------------------------------------------
 ## List explicit rules
